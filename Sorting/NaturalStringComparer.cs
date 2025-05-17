@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 /// <summary>
 /// Comparer that performs a natural comparison between strings, correctly comparing embedded numbers.
 /// </summary>
-public partial class NaturalStringComparer : IComparer<string>
+public partial class NaturalStringComparer : IComparer<string?>
 {
 	/// <summary>
 	/// Regular expression to match alphanumeric chunks in a string.
