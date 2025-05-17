@@ -1055,7 +1055,7 @@ function New-Changelog {
         Optional path to write the changelog file to. Defaults to workspace root.
     .PARAMETER IncludeAllVersions
         Whether to include all previous versions in the changelog. Defaults to $true.
-    .PARAMETER LatestChangelogPath
+    .PARAMETER LatestChangelogFile
         Optional path to write the latest version's changelog to. Defaults to "LATEST_CHANGELOG.md".
     #>
     [CmdletBinding()]
@@ -1066,7 +1066,7 @@ function New-Changelog {
         [string]$CommitHash,
         [string]$OutputPath = "",
         [bool]$IncludeAllVersions = $true,
-        [string]$LatestChangelogPath = "LATEST_CHANGELOG.md"
+        [string]$LatestChangelogFile = "LATEST_CHANGELOG.md"
     )
 
     # Configure git versionsort to correctly handle prereleases
@@ -1149,7 +1149,7 @@ function New-Changelog {
     [System.IO.File]::WriteAllText($filePath, $changelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "New-Changelog"
 
     # Write latest version's changelog to separate file for GitHub releases
-    $latestPath = if ($OutputPath) { Join-Path $OutputPath $LatestChangelogPath } else { $LatestChangelogPath }
+    $latestPath = if ($OutputPath) { Join-Path $OutputPath $LatestChangelogFile } else { $LatestChangelogFile }
     $latestVersionNotes = $latestVersionNotes.ReplaceLineEndings($script:lineEnding)
     [System.IO.File]::WriteAllText($latestPath, $latestVersionNotes, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "New-Changelog"
     Write-Information "Latest version changelog saved to: $latestPath" -Tags "New-Changelog"
@@ -1208,7 +1208,7 @@ function Update-ProjectMetadata {
         Write-Information "Generating changelog..." -Tags "Update-ProjectMetadata"
         # Generate both full changelog and latest version changelog
         try {
-            New-Changelog -Version $version -CommitHash $BuildConfiguration.ReleaseHash -LatestChangelogPath $BuildConfiguration.LatestChangelogFile | Write-InformationStream -Tags "Update-ProjectMetadata"
+            New-Changelog -Version $version -CommitHash $BuildConfiguration.ReleaseHash -LatestChangelogFile $BuildConfiguration.LatestChangelogFile | Write-InformationStream -Tags "Update-ProjectMetadata"
         }
         catch {
             $errorMessage = $_.ToString()
@@ -1220,7 +1220,7 @@ function Update-ProjectMetadata {
             $minimalChangelog += "Initial release or repository with no prior history.$($script:lineEnding)$($script:lineEnding)"
             
             [System.IO.File]::WriteAllText("CHANGELOG.md", $minimalChangelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
-            [System.IO.File]::WriteAllText($BuildConfiguration.LatestChangelogPath, $minimalChangelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
+            [System.IO.File]::WriteAllText($BuildConfiguration.LatestChangelogFile, $minimalChangelog, [System.Text.UTF8Encoding]::new($false)) | Write-InformationStream -Tags "Update-ProjectMetadata"
         }
 
         # Create AUTHORS.md if authors are provided
