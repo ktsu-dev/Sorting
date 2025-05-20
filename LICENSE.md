@@ -1,6 +1,6 @@
 MIT License
 
-https://github.com/ktsu-dev/ktsu-dev/Sorting
+https://github.com/ktsu-dev/Sorting
 
 Copyright (c) 2023-2025 ktsu-dev
 
