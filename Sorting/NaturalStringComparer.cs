@@ -14,8 +14,8 @@ public partial class NaturalStringComparer : IComparer<string?>
 	/// <summary>
 	/// Regular expression to match alphanumeric chunks in a string.
 	/// </summary>
-	[GeneratedRegex(@"(\d+)|(\D+)")]
-	private static partial Regex CreateNaturalChunkRegex();
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "SYSLIB1045:Convert to 'GeneratedRegexAttribute'.", Justification = "<Pending>")]
+	private static Regex CreateNaturalChunkRegex() => new(@"(\d+)|(\D+)");
 
 	/// <summary>
 	/// Compares two strings using natural sorting, where embedded numbers are compared as numeric values.
@@ -49,20 +49,20 @@ public partial class NaturalStringComparer : IComparer<string?>
 			return 0;
 		}
 
-		var regex = CreateNaturalChunkRegex();
-		var xMatches = regex.Matches(x).Cast<Match>().ToArray();
-		var yMatches = regex.Matches(y).Cast<Match>().ToArray();
+		Regex regex = CreateNaturalChunkRegex();
+		Match[] xMatches = [.. regex.Matches(x).Cast<Match>()];
+		Match[] yMatches = [.. regex.Matches(y).Cast<Match>()];
 
 		int i = 0, j = 0;
 		while (i < xMatches.Length && j < yMatches.Length)
 		{
-			var xMatch = xMatches[i++];
-			var yMatch = yMatches[j++];
+			Match xMatch = xMatches[i++];
+			Match yMatch = yMatches[j++];
 
 			// If both chunks are numeric, compare them as numbers
-			if (int.TryParse(xMatch.Value, out var xNum) && int.TryParse(yMatch.Value, out var yNum))
+			if (int.TryParse(xMatch.Value, out int xNum) && int.TryParse(yMatch.Value, out int yNum))
 			{
-				var numComparison = xNum.CompareTo(yNum);
+				int numComparison = xNum.CompareTo(yNum);
 				if (numComparison != 0)
 				{
 					return numComparison;
@@ -70,7 +70,7 @@ public partial class NaturalStringComparer : IComparer<string?>
 			}
 			else // Otherwise, compare them as strings
 			{
-				var stringComparison = string.Compare(xMatch.Value, yMatch.Value, StringComparison.Ordinal);
+				int stringComparison = string.Compare(xMatch.Value, yMatch.Value, StringComparison.Ordinal);
 				if (stringComparison != 0)
 				{
 					return stringComparison;

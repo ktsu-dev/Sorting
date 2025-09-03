@@ -66,25 +66,25 @@ public class NaturalStringComparerTests
 	public void Compare_MixedAlphaNumeric_SortsNaturally()
 	{
 		// Test with a variety of real-world naming patterns
-		var unsorted = new[]
-		{
+		string[] unsorted =
+		[
 			"z10.doc",
 			"z1.doc",
 			"z17.doc",
 			"z2.doc",
 			"z23.doc",
 			"z3.doc"
-		};
+		];
 
-		var sorted = new[]
-		{
+		string[] sorted =
+		[
 			"z1.doc",
 			"z2.doc",
 			"z3.doc",
 			"z10.doc",
 			"z17.doc",
 			"z23.doc"
-		};
+		];
 
 		// Sort the array using our comparer
 		Array.Sort(unsorted, _comparer);
@@ -123,8 +123,8 @@ public class NaturalStringComparerTests
 	public void Compare_SortArray_CorrectOrder()
 	{
 		// A mix of alphanumeric strings to test sorting
-		var files = new[]
-		{
+		string[] files =
+		[
 			"file10.txt",
 			"file1.txt",
 			"file100.txt",
@@ -133,10 +133,10 @@ public class NaturalStringComparerTests
 			"file20.txt",
 			"fileb.txt",
 			"filea.txt"
-		};
+		];
 
-		var expected = new[]
-		{
+		string[] expected =
+		[
 			"file1.txt",
 			"file2.txt",
 			"file10.txt",
@@ -145,7 +145,7 @@ public class NaturalStringComparerTests
 			"file100.txt",
 			"filea.txt",
 			"fileb.txt"
-		};
+		];
 
 		Array.Sort(files, _comparer);
 
@@ -164,21 +164,21 @@ public class NaturalStringComparerTests
 	[TestMethod]
 	public void Compare_WithMixedNumbersAndText_SortsCorrectly()
 	{
-		var unsorted = new[]
-		{
+		string[] unsorted =
+		[
 			"10X",
 			"1X",
 			"9X",
 			"2X"
-		};
+		];
 
-		var sorted = new[]
-		{
+		string[] sorted =
+		[
 			"1X",
 			"2X",
 			"9X",
 			"10X"
-		};
+		];
 
 		Array.Sort(unsorted, _comparer);
 
