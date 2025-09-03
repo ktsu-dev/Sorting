@@ -1,3 +1,6 @@
+## v1.0.2
+
+No significant changes detected since v1.0.2.
 ## v1.0.2 (patch)
 
 Changes since v1.0.1:
@@ -17,14 +20,7 @@ Changes since v1.0.2-pre.1:
 - Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
 ## v1.0.2-pre.1 (prerelease)
 
-Changes since v1.0.1:
-
-- Sync .gitattributes ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .editorconfig ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .gitignore ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .runsettings ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync .mailmap ([@ktsu[bot]](https://github.com/ktsu[bot]))
-- Sync scripts\PSBuild.psm1 ([@ktsu[bot]](https://github.com/ktsu[bot]))
+Incremental prerelease update.
 ## v1.0.1 (patch)
 
 Changes since v1.0.0:
