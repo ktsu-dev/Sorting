@@ -2,6 +2,8 @@
 // All rights reserved.
 // Licensed under the MIT license.
 
+[assembly: Parallelize(Workers = 0, Scope = ExecutionScope.MethodLevel)]
+
 namespace ktsu.Sorting.Tests;
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -18,10 +20,10 @@ public class NaturalStringComparerTests
 		Assert.AreEqual(0, _comparer.Compare(null, null));
 
 		// null should be less than any string
-		Assert.IsTrue(_comparer.Compare(null, "any") < 0);
+		Assert.IsLessThan(0, _comparer.Compare(null, "any"));
 
 		// Any string should be greater than null
-		Assert.IsTrue(_comparer.Compare("any", null) > 0);
+		Assert.IsGreaterThan(0, _comparer.Compare("any", null));
 	}
 
 	[TestMethod]
@@ -41,25 +43,25 @@ public class NaturalStringComparerTests
 	public void Compare_SimpleStrings_SortsAlphabetically()
 	{
 		// Basic alphabetical comparisons
-		Assert.IsTrue(_comparer.Compare("a", "b") < 0);
-		Assert.IsTrue(_comparer.Compare("b", "a") > 0);
+		Assert.IsLessThan(0, _comparer.Compare("a", "b"));
+		Assert.IsGreaterThan(0, _comparer.Compare("b", "a"));
 
 		// Case sensitivity (should be case-sensitive by default)
-		Assert.IsTrue(_comparer.Compare("a", "A") > 0); // Uppercase comes before lowercase in ordinal comparison
+		Assert.IsGreaterThan(0, _comparer.Compare("a", "A")); // Uppercase comes before lowercase in ordinal comparison
 	}
 
 	[TestMethod]
 	public void Compare_StringsWithNumbers_NaturalSortOrder()
 	{
 		// String with different numbers
-		Assert.IsTrue(_comparer.Compare("file2", "file10") < 0); // Natural: 2 < 10
+		Assert.IsLessThan(0, _comparer.Compare("file2", "file10")); // Natural: 2 < 10
 
 		// Compare with same prefix but different numbers
-		Assert.IsTrue(_comparer.Compare("image9.jpg", "image10.jpg") < 0);
+		Assert.IsLessThan(0, _comparer.Compare("image9.jpg", "image10.jpg"));
 
 		// Multiple numbers in strings
-		Assert.IsTrue(_comparer.Compare("page-2-item-5", "page-2-item-10") < 0);
-		Assert.IsTrue(_comparer.Compare("page-5-item-3", "page-10-item-1") < 0);
+		Assert.IsLessThan(0, _comparer.Compare("page-2-item-5", "page-2-item-10"));
+		Assert.IsLessThan(0, _comparer.Compare("page-5-item-3", "page-10-item-1"));
 	}
 
 	[TestMethod]
@@ -97,26 +99,26 @@ public class NaturalStringComparerTests
 	public void Compare_StringsWithLeadingZeros_HandledCorrectly()
 	{
 		// Numbers with leading zeros should be treated as numeric values
-		Assert.IsTrue(_comparer.Compare("file005", "file5") == 0); // Numerically equal
-		Assert.IsTrue(_comparer.Compare("file005", "file06") < 0); // 5 < 6 numerically
+		Assert.AreEqual(0, _comparer.Compare("file005", "file5")); // Numerically equal
+		Assert.IsLessThan(0, _comparer.Compare("file005", "file06")); // 5 < 6 numerically
 	}
 
 	[TestMethod]
 	public void Compare_DifferentLengthStrings_ShorterComesFirst()
 	{
 		// When strings are identical up to the length of the shorter one
-		Assert.IsTrue(_comparer.Compare("abc", "abcdef") < 0);
-		Assert.IsTrue(_comparer.Compare("abcdef", "abc") > 0);
+		Assert.IsLessThan(0, _comparer.Compare("abc", "abcdef"));
+		Assert.IsGreaterThan(0, _comparer.Compare("abcdef", "abc"));
 
 		// But not if the shorter string is lexicographically greater
-		Assert.IsTrue(_comparer.Compare("def", "abc123") > 0);
+		Assert.IsGreaterThan(0, _comparer.Compare("def", "abc123"));
 	}
 
 	[TestMethod]
 	public void Compare_LargeNumbers_HandledCorrectly()
 	{
 		// Should handle numbers within integer range
-		Assert.IsTrue(_comparer.Compare("file1000000", "file9999999") < 0);
+		Assert.IsLessThan(0, _comparer.Compare("file1000000", "file9999999"));
 	}
 
 	[TestMethod]
@@ -156,9 +158,9 @@ public class NaturalStringComparerTests
 	public void Compare_WithSpecialCharacters_SortsCorrectly()
 	{
 		// Test strings with special characters
-		Assert.IsTrue(_comparer.Compare("file-1", "file-2") < 0);
-		Assert.IsTrue(_comparer.Compare("file_1", "file_2") < 0);
-		Assert.IsTrue(_comparer.Compare("file 1", "file 2") < 0);
+		Assert.IsLessThan(0, _comparer.Compare("file-1", "file-2"));
+		Assert.IsLessThan(0, _comparer.Compare("file_1", "file_2"));
+		Assert.IsLessThan(0, _comparer.Compare("file 1", "file 2"));
 	}
 
 	[TestMethod]
