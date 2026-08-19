@@ -2,6 +2,14 @@
 
 A .NET library that provides advanced sorting utilities for specialized sorting scenarios.
 
+[![License](https://img.shields.io/github/license/ktsu-dev/Sorting.svg?label=License&logo=nuget)](LICENSE.md)
+[![NuGet Version](https://img.shields.io/nuget/v/ktsu.Sorting?label=Stable&logo=nuget)](https://nuget.org/packages/ktsu.Sorting)
+[![NuGet Version](https://img.shields.io/nuget/vpre/ktsu.Sorting?label=Latest&logo=nuget)](https://nuget.org/packages/ktsu.Sorting)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.Sorting?label=Downloads&logo=nuget)](https://nuget.org/packages/ktsu.Sorting)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ktsu-dev/Sorting?label=Commits&logo=github)](https://github.com/ktsu-dev/Sorting/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors/ktsu-dev/Sorting?label=Contributors&logo=github)](https://github.com/ktsu-dev/Sorting/graphs/contributors)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ktsu-dev/Sorting/dotnet.yml?label=Build&logo=github)](https://github.com/ktsu-dev/Sorting/actions)
+
 ## Overview
 
 ktsu.Sorting offers a collection of sorting utilities to address common sorting challenges that aren't easily handled by standard sorting methods. The library is designed to be modular and extensible, allowing you to use only the components you need.
