@@ -8,7 +8,7 @@ A .NET library that provides advanced sorting utilities for specialized sorting 
 [![NuGet Downloads](https://img.shields.io/nuget/dt/ktsu.Sorting?label=Downloads&logo=nuget)](https://nuget.org/packages/ktsu.Sorting)
 [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/ktsu-dev/Sorting?label=Commits&logo=github)](https://github.com/ktsu-dev/Sorting/commits/main)
 [![GitHub contributors](https://img.shields.io/github/contributors/ktsu-dev/Sorting?label=Contributors&logo=github)](https://github.com/ktsu-dev/Sorting/graphs/contributors)
-[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ktsu-dev/Sorting/dotnet.yml?label=Build&logo=github)](https://github.com/ktsu-dev/Sorting/actions)
+[![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/ktsu-dev/Sorting/dotnet.yml?branch=main&label=Build&logo=github)](https://github.com/ktsu-dev/Sorting/actions)
 
 ## Overview
 
