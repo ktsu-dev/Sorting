@@ -117,6 +117,9 @@ public class NaturalStringComparerTests
 	{
 		// Should handle numbers within integer range
 		Assert.IsLessThan(0, _comparer.Compare("file1000000", "file9999999"));
+
+		// Should handle numbers beyond Int32 range
+		Assert.IsLessThan(0, _comparer.Compare("file9999999999", "file10000000000"));
 	}
 
 	[TestMethod]
