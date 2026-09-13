@@ -58,9 +58,9 @@ public partial class NaturalStringComparer : IComparer<string?>
 			Match yMatch = yMatches[j++];
 
 			// If both chunks are numeric, compare them as numbers
-			if (int.TryParse(xMatch.Value, out int xNum) && int.TryParse(yMatch.Value, out int yNum))
+			if (char.IsDigit(xMatch.Value[0]) && char.IsDigit(yMatch.Value[0]))
 			{
-				int numComparison = xNum.CompareTo(yNum);
+				int numComparison = CompareNumericChunks(xMatch.Value, yMatch.Value);
 				if (numComparison != 0)
 				{
 					return numComparison;
@@ -78,5 +78,29 @@ public partial class NaturalStringComparer : IComparer<string?>
 
 		// If we've exhausted one sequence but not the other, the shorter one comes first
 		return xMatches.Length.CompareTo(yMatches.Length);
+	}
+
+	private static int CompareNumericChunks(string xChunk, string yChunk)
+	{
+		string xTrimmed = xChunk.TrimStart('0');
+		string yTrimmed = yChunk.TrimStart('0');
+
+		if (xTrimmed.Length == 0)
+		{
+			xTrimmed = "0";
+		}
+
+		if (yTrimmed.Length == 0)
+		{
+			yTrimmed = "0";
+		}
+
+		int lengthComparison = xTrimmed.Length.CompareTo(yTrimmed.Length);
+		if (lengthComparison != 0)
+		{
+			return lengthComparison;
+		}
+
+		return string.Compare(xTrimmed, yTrimmed, StringComparison.Ordinal);
 	}
 }
