@@ -1,6 +1,7 @@
-## v1.0.37 (patch)
+## v1.0.38 (patch)
 
-Changes since v1.0.36:
+Changes since v1.0.37:
 
-- Gate Dependabot auto-merge on CI actually being green ([@Claude](https://github.com/Claude))
+- Grant the shared pipelines the permissions they request ([@Claude](https://github.com/Claude))
+- Adopt the shared CI pipeline ([@Claude](https://github.com/Claude))
 
