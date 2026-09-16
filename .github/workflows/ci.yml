@@ -27,6 +27,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# The caller grants; a called workflow can only reduce. This is the union of what the
+# pipelines request -- dotnet.yml's release job needs contents and packages, its security
+# job needs id-token -- and a pipeline that needs a permission missing here fails the run
+# at startup, before any job exists to report it.
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
 jobs:
   ci:
     uses: ktsu-dev/.github/.github/workflows/ci-shared.yml@release
