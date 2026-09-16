@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      ["**.md", ".github/ISSUE_TEMPLATE/**", ".github/pull_request_template.md"]
+  pull_request:
+    paths-ignore:
+      ["**.md", ".github/ISSUE_TEMPLATE/**", ".github/pull_request_template.md"]
+  schedule:
+    - cron: "0 23 * * *" # Daily at 11 PM UTC
+  workflow_dispatch:
+    inputs:
+      version-bump:
+        description: 'Version bump type'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: ktsu-dev/.github/.github/workflows/ci-shared.yml@release
+    secrets: inherit
+    with:
+      # `inputs` is empty on push, pull_request and schedule; only a dispatch sets it.
+      version-bump: ${{ inputs.version-bump || 'auto' }}
