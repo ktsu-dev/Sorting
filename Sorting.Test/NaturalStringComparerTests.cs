@@ -102,6 +102,48 @@ public class NaturalStringComparerTests
 	}
 
 	[TestMethod]
+	public void Compare_NonAsciiDigits_ComparedByNumericValue()
+	{
+		// Arabic-Indic five is numerically less than ASCII nine, despite the far greater code point
+		Assert.IsLessThan(0, _comparer.Compare("٥", "9"));
+		Assert.IsGreaterThan(0, _comparer.Compare("9", "٥"));
+
+		// The same holds within a single non-ASCII script
+		Assert.IsLessThan(0, _comparer.Compare("٥", "٩")); // Arabic-Indic 5 < 9
+
+		// Devanagari digits order by value too
+		Assert.IsLessThan(0, _comparer.Compare("५", "३०")); // 5 < 30
+	}
+
+	[TestMethod]
+	public void Compare_NonAsciiDigits_EqualValuesAreEqual()
+	{
+		// Arabic-Indic five and ASCII five spell the same number
+		Assert.AreEqual(0, _comparer.Compare("٥", "5"));
+		Assert.AreEqual(0, _comparer.Compare("file٥", "file5"));
+	}
+
+	[TestMethod]
+	public void Compare_NonAsciiLeadingZeros_NormalizedLikeAsciiZeros()
+	{
+		// An Arabic-Indic zero is a leading zero, so both chunks reduce to the single digit 0
+		Assert.AreEqual(0, _comparer.Compare("٠0", "0"));
+		Assert.AreEqual(0, _comparer.Compare("٠٥", "5"));
+
+		// An all-zeros chunk compares as zero, whatever the script
+		Assert.AreEqual(0, _comparer.Compare("٠٠", "0"));
+		Assert.IsLessThan(0, _comparer.Compare("٠٠", "1"));
+	}
+
+	[TestMethod]
+	public void Compare_MixedScriptDigits_ComparedByNumericValue()
+	{
+		// A single chunk may mix scripts; it still spells one number
+		Assert.IsLessThan(0, _comparer.Compare("file1٥", "file20")); // 15 < 20
+		Assert.AreEqual(0, _comparer.Compare("file1٥", "file15"));
+	}
+
+	[TestMethod]
 	public void Compare_DifferentLengthStrings_ShorterComesFirst()
 	{
 		// When strings are identical up to the length of the shorter one
