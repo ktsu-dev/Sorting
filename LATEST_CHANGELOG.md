@@ -1,6 +1,6 @@
-## v1.0.41 (patch)
+## v1.0.42 (patch)
 
-Changes since v1.0.40:
+Changes since v1.0.41:
 
-- Bump Polyfill from 11.3.0 to 11.4.0 ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- fix: compare non-ASCII digits by numeric value in NaturalStringComparer [patch] ([@Claude](https://github.com/Claude))
 
