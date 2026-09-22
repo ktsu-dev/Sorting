@@ -2,11 +2,16 @@
 
 namespace ktsu.Sorting;
 
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 /// <summary>
 /// Comparer that performs a natural comparison between strings, correctly comparing embedded numbers.
 /// </summary>
+/// <remarks>
+/// A run of Unicode decimal digits (category <c>Nd</c>) is a number, whatever script it is written
+/// in, and is compared by the value it spells rather than by its code points.
+/// </remarks>
 public partial class NaturalStringComparer : IComparer<string?>
 {
 	/// <summary>
@@ -80,27 +85,70 @@ public partial class NaturalStringComparer : IComparer<string?>
 		return xMatches.Length.CompareTo(yMatches.Length);
 	}
 
+	/// <summary>
+	/// Compares two chunks of decimal digits by the numeric value they spell, rather than by their
+	/// code points.
+	/// </summary>
+	/// <remarks>
+	/// Both chunks come from the <c>\d+</c> alternative of the chunk regex, so every character is a
+	/// Unicode decimal digit (category <c>Nd</c>) and has a decimal value of 0-9. Comparing those
+	/// values, rather than the raw UTF-16 code points, is what keeps non-ASCII digit scripts
+	/// ordering by magnitude: <c>'٥'</c> (Arabic-Indic five) is numerically less than <c>'9'</c>,
+	/// even though its code point is far greater.
+	/// </remarks>
+	/// <param name="xChunk">First digit chunk to compare.</param>
+	/// <param name="yChunk">Second digit chunk to compare.</param>
+	/// <returns>A negative number, zero, or a positive number, as for <see cref="Compare"/>.</returns>
 	private static int CompareNumericChunks(string xChunk, string yChunk)
 	{
-		string xTrimmed = xChunk.TrimStart('0');
-		string yTrimmed = yChunk.TrimStart('0');
+		int xStart = SkipLeadingZeros(xChunk);
+		int yStart = SkipLeadingZeros(yChunk);
 
-		if (xTrimmed.Length == 0)
-		{
-			xTrimmed = "0";
-		}
-
-		if (yTrimmed.Length == 0)
-		{
-			yTrimmed = "0";
-		}
-
-		int lengthComparison = xTrimmed.Length.CompareTo(yTrimmed.Length);
+		// With leading zeros gone, the chunk spelling more digits is the larger number
+		int xDigits = xChunk.Length - xStart;
+		int yDigits = yChunk.Length - yStart;
+		int lengthComparison = xDigits.CompareTo(yDigits);
 		if (lengthComparison != 0)
 		{
 			return lengthComparison;
 		}
 
-		return string.Compare(xTrimmed, yTrimmed, StringComparison.Ordinal);
+		// Same digit count, so the first differing digit decides
+		for (int offset = 0; offset < xDigits; offset++)
+		{
+			int digitComparison = DigitValue(xChunk[xStart + offset]).CompareTo(DigitValue(yChunk[yStart + offset]));
+			if (digitComparison != 0)
+			{
+				return digitComparison;
+			}
+		}
+
+		return 0;
 	}
+
+	/// <summary>
+	/// Returns the index of the first digit in <paramref name="chunk"/> that is not a zero, or
+	/// <c>chunk.Length - 1</c> when the chunk is all zeros, so a chunk of zeros compares as a
+	/// single zero digit.
+	/// </summary>
+	/// <param name="chunk">The digit chunk to scan.</param>
+	/// <returns>The index at which the chunk's significant digits begin.</returns>
+	private static int SkipLeadingZeros(string chunk)
+	{
+		int index = 0;
+		while (index < chunk.Length - 1 && DigitValue(chunk[index]) == 0)
+		{
+			index++;
+		}
+
+		return index;
+	}
+
+	/// <summary>
+	/// Returns the decimal value of a Unicode decimal digit, so that digits from any script compare
+	/// by magnitude.
+	/// </summary>
+	/// <param name="digit">The digit character, which the chunk regex guarantees is category <c>Nd</c>.</param>
+	/// <returns>The digit's value of 0-9.</returns>
+	private static int DigitValue(char digit) => CharUnicodeInfo.GetDecimalDigitValue(digit);
 }
