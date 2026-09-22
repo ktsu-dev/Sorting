@@ -1,6 +1,6 @@
-## v1.0.42 (patch)
+## v1.0.43 (patch)
 
-Changes since v1.0.41:
+Changes since v1.0.42:
 
-- fix: compare non-ASCII digits by numeric value in NaturalStringComparer [patch] ([@Claude](https://github.com/Claude))
+- Bump the ktsu group with 9 updates ([@dependabot[bot]](https://github.com/dependabot[bot]))
 
