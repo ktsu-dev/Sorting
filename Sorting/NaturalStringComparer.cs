@@ -97,46 +97,35 @@ public partial class NaturalStringComparer : IComparer<string?>
 	private static List<Chunk> SplitIntoChunks(string value)
 	{
 		List<Chunk> chunks = [];
-		StringBuilder digits = new();
-		int textStart = -1;
+		StringBuilder current = new();
+		bool currentIsNumeric = false;
 		int index = 0;
 		while (index < value.Length)
 		{
-			int width = char.IsSurrogatePair(value, index) ? 2 : 1;
-			if (CharUnicodeInfo.GetUnicodeCategory(value, index) == UnicodeCategory.DecimalDigitNumber)
+			bool isDigit = CharUnicodeInfo.GetUnicodeCategory(value, index) == UnicodeCategory.DecimalDigitNumber;
+			if (current.Length > 0 && isDigit != currentIsNumeric)
 			{
-				if (textStart >= 0)
-				{
-					chunks.Add(new Chunk(false, value[textStart..index]));
-					textStart = -1;
-				}
+				chunks.Add(new Chunk(currentIsNumeric, current.ToString()));
+				current.Clear();
+			}
 
-				digits.Append((char)('0' + CharUnicodeInfo.GetDecimalDigitValue(value, index)));
+			currentIsNumeric = isDigit;
+			int width = char.IsSurrogatePair(value, index) ? 2 : 1;
+			if (isDigit)
+			{
+				current.Append((char)('0' + CharUnicodeInfo.GetDecimalDigitValue(value, index)));
 			}
 			else
 			{
-				if (digits.Length > 0)
-				{
-					chunks.Add(new Chunk(true, digits.ToString()));
-					digits.Clear();
-				}
-
-				if (textStart < 0)
-				{
-					textStart = index;
-				}
+				current.Append(value, index, width);
 			}
 
 			index += width;
 		}
 
-		if (digits.Length > 0)
+		if (current.Length > 0)
 		{
-			chunks.Add(new Chunk(true, digits.ToString()));
-		}
-		else if (textStart >= 0)
-		{
-			chunks.Add(new Chunk(false, value[textStart..]));
+			chunks.Add(new Chunk(currentIsNumeric, current.ToString()));
 		}
 
 		return chunks;
