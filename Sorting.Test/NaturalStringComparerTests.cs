@@ -229,4 +229,72 @@ public class NaturalStringComparerTests
 
 		CollectionAssert.AreEqual(sorted, unsorted);
 	}
+
+	[TestMethod]
+	public void Compare_NonAsciiDigitAgainstText_OrdersLikeTheAsciiDigit()
+	{
+		// A digit chunk against a text chunk used to compare code points, so the Arabic-Indic five
+		// sorted after letters while the ASCII five, which it equals, sorted before them.
+		Assert.IsLessThan(0, _comparer.Compare("\u0665", "10"));
+		Assert.IsLessThan(0, _comparer.Compare("10", "z"));
+		Assert.IsLessThan(0, _comparer.Compare("\u0665", "z"));
+		Assert.IsGreaterThan(0, _comparer.Compare("z", "\u0665"));
+		Assert.IsGreaterThan(0, _comparer.Compare("\u0665", "-"));
+		Assert.IsGreaterThan(0, _comparer.Compare("5", "-"));
+		Assert.IsLessThan(0, _comparer.Compare("\u0665", "~"));
+		Assert.IsLessThan(0, _comparer.Compare("5", "~"));
+	}
+
+	[TestMethod]
+	public void Compare_SortOfMixedScriptDigitsAndText_DoesNotDependOnInputOrder()
+	{
+		string[] expected = ["\u0665", "10", "z"];
+
+		string[] forward = ["\u0665", "10", "z"];
+		string[] backward = ["z", "10", "\u0665"];
+		Array.Sort(forward, _comparer);
+		Array.Sort(backward, _comparer);
+
+		CollectionAssert.AreEqual(expected, forward);
+		CollectionAssert.AreEqual(expected, backward);
+	}
+
+	[TestMethod]
+	public void Compare_IsTransitiveOverMixedScriptDigitsAndText()
+	{
+		string[] values =
+		[
+			"", "0", "5", "05", "10", "\u0665", "\u0661\u0660", "\U0001D7D7", "\U0001D7CF\U0001D7CE",
+			"\u0969", "a", "z", "Z", " ", "-", "_", "~", "\u00e9", "\U0001F600",
+			"a5", "a\u0665", "a10", "a-", "a z", "5a", "\u0665a", "10a", "-5", "~5",
+		];
+
+		foreach (string a in values)
+		{
+			foreach (string b in values)
+			{
+				Assert.AreEqual(Math.Sign(_comparer.Compare(a, b)), -Math.Sign(_comparer.Compare(b, a)), $"antisymmetry: '{a}' vs '{b}'");
+
+				foreach (string c in values)
+				{
+					int ab = Math.Sign(_comparer.Compare(a, b));
+					int bc = Math.Sign(_comparer.Compare(b, c));
+					if (ab <= 0 && bc <= 0)
+					{
+						Assert.IsLessThanOrEqualTo(0, _comparer.Compare(a, c), $"transitivity: '{a}' <= '{b}' <= '{c}'");
+					}
+				}
+			}
+		}
+	}
+
+	[TestMethod]
+	public void Compare_DigitsOutsideTheBasicMultilingualPlane_ComparedByNumericValue()
+	{
+		// Mathematical bold digits nine, and one followed by zero, are surrogate pairs in UTF-16.
+		Assert.IsLessThan(0, _comparer.Compare("file\U0001D7D7", "file\U0001D7CF\U0001D7CE"));
+		Assert.IsLessThan(0, _comparer.Compare("file\U0001D7D7", "file10"));
+		Assert.IsGreaterThan(0, _comparer.Compare("file\U0001D7D7", "file8"));
+		Assert.AreEqual(0, _comparer.Compare("file\U0001D7D7", "file9"));
+	}
 }
