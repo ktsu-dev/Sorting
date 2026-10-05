@@ -3,7 +3,6 @@
 namespace ktsu.Sorting;
 
 using System.Globalization;
-using System.Text;
 
 /// <summary>
 /// Comparer that performs a natural comparison between strings, correctly comparing embedded numbers.
@@ -48,151 +47,202 @@ public partial class NaturalStringComparer : IComparer<string?>
 			return 0;
 		}
 
-		List<Chunk> xChunks = SplitIntoChunks(x);
-		List<Chunk> yChunks = SplitIntoChunks(y);
-
-		int i = 0, j = 0;
-		while (i < xChunks.Count && j < yChunks.Count)
+		// Walk both strings a chunk at a time, in place, so a comparison allocates nothing. A sort
+		// makes O(n log n) of them, and building each string's chunks first cost more than the
+		// comparing did.
+		int xIndex = 0;
+		int yIndex = 0;
+		while (xIndex < x.Length && yIndex < y.Length)
 		{
-			Chunk xChunk = xChunks[i++];
-			Chunk yChunk = yChunks[j++];
+			bool xIsNumeric = IsDigitAt(x, xIndex);
+			bool yIsNumeric = IsDigitAt(y, yIndex);
+			int xEnd = ChunkEnd(x, xIndex, xIsNumeric);
+			int yEnd = ChunkEnd(y, yIndex, yIsNumeric);
 
-			// If both chunks are numeric, compare them as numbers
-			if (xChunk.IsNumeric && yChunk.IsNumeric)
+			int comparison;
+			if (xIsNumeric && yIsNumeric)
 			{
-				int numComparison = CompareNumericChunks(xChunk.Value, yChunk.Value);
-				if (numComparison != 0)
-				{
-					return numComparison;
-				}
+				// If both chunks are numeric, compare them as numbers
+				comparison = CompareNumericChunks(x, xIndex, xEnd, y, yIndex, yEnd);
 			}
-			else // Otherwise, compare them as strings
+			else if (xIsNumeric || yIsNumeric)
 			{
-				// A numeric chunk holds ASCII digits and a text chunk never starts with a digit, so a
-				// number against text is decided by the first character, the same way for every
-				// digit script. Comparing a non-ASCII digit's own code point here would sort it after
-				// letters while its ASCII equal sorts before them, which makes the order intransitive.
-				int stringComparison = string.Compare(xChunk.Value, yChunk.Value, StringComparison.Ordinal);
-				if (stringComparison != 0)
-				{
-					return stringComparison;
-				}
-			}
-		}
-
-		// If we've exhausted one sequence but not the other, the shorter one comes first
-		return xChunks.Count.CompareTo(yChunks.Count);
-	}
-
-	/// <summary>
-	/// Splits a string into alternating runs of decimal digits and of other text, walking it by code
-	/// point so that a digit encoded as a surrogate pair still counts as a digit.
-	/// </summary>
-	/// <remarks>
-	/// A numeric chunk's value is rewritten in ASCII digits, so that numbers from every script compare
-	/// alike both with each other and with text. A text chunk keeps its original characters.
-	/// </remarks>
-	/// <param name="value">The string to split.</param>
-	/// <returns>The chunks of <paramref name="value"/>, in order.</returns>
-	private static List<Chunk> SplitIntoChunks(string value)
-	{
-		List<Chunk> chunks = [];
-		StringBuilder current = new();
-		bool currentIsNumeric = false;
-		int index = 0;
-		while (index < value.Length)
-		{
-			bool isDigit = CharUnicodeInfo.GetUnicodeCategory(value, index) == UnicodeCategory.DecimalDigitNumber;
-			if (current.Length > 0 && isDigit != currentIsNumeric)
-			{
-				chunks.Add(new Chunk(currentIsNumeric, current.ToString()));
-				current.Clear();
-			}
-
-			currentIsNumeric = isDigit;
-			int width = char.IsSurrogatePair(value, index) ? 2 : 1;
-			if (isDigit)
-			{
-				current.Append((char)('0' + CharUnicodeInfo.GetDecimalDigitValue(value, index)));
+				// A number is compared with text as its ASCII digits would be, and a text chunk never
+				// starts with a digit, so the first character decides. Comparing a non-ASCII digit's
+				// own code point here would sort it after letters while its ASCII equal sorts before
+				// them, which makes the order intransitive.
+				comparison = xIsNumeric
+					? AsciiDigitAt(x, xIndex).CompareTo(y[yIndex])
+					: x[xIndex].CompareTo(AsciiDigitAt(y, yIndex));
 			}
 			else
 			{
-				current.Append(value, index, width);
+				// Otherwise, compare them as strings
+				comparison = CompareTextChunks(x, xIndex, xEnd, y, yIndex, yEnd);
 			}
 
-			index += width;
-		}
-
-		if (current.Length > 0)
-		{
-			chunks.Add(new Chunk(currentIsNumeric, current.ToString()));
-		}
-
-		return chunks;
-	}
-
-	/// <summary>
-	/// Compares two chunks of decimal digits by the numeric value they spell, rather than by their
-	/// code points.
-	/// </summary>
-	/// <remarks>
-	/// Both chunks come from <see cref="SplitIntoChunks"/>, which has already rewritten every Unicode
-	/// decimal digit (category <c>Nd</c>) as the ASCII digit of the same value. That is what keeps
-	/// non-ASCII digit scripts ordering by magnitude: <c>'٥'</c> (Arabic-Indic five) is numerically
-	/// less than <c>'9'</c>, even though its code point is far greater.
-	/// </remarks>
-	/// <param name="xChunk">First digit chunk to compare.</param>
-	/// <param name="yChunk">Second digit chunk to compare.</param>
-	/// <returns>A negative number, zero, or a positive number, as for <see cref="Compare"/>.</returns>
-	private static int CompareNumericChunks(string xChunk, string yChunk)
-	{
-		int xStart = SkipLeadingZeros(xChunk);
-		int yStart = SkipLeadingZeros(yChunk);
-
-		// With leading zeros gone, the chunk spelling more digits is the larger number
-		int xDigits = xChunk.Length - xStart;
-		int yDigits = yChunk.Length - yStart;
-		int lengthComparison = xDigits.CompareTo(yDigits);
-		if (lengthComparison != 0)
-		{
-			return lengthComparison;
-		}
-
-		// Same digit count, so the first differing digit decides
-		for (int offset = 0; offset < xDigits; offset++)
-		{
-			int digitComparison = xChunk[xStart + offset].CompareTo(yChunk[yStart + offset]);
-			if (digitComparison != 0)
+			if (comparison != 0)
 			{
-				return digitComparison;
+				return comparison;
 			}
+
+			xIndex = xEnd;
+			yIndex = yEnd;
 		}
 
-		return 0;
+		// If we've exhausted one sequence but not the other, the shorter one comes first
+		return xIndex < x.Length ? 1 : yIndex < y.Length ? -1 : 0;
 	}
 
 	/// <summary>
-	/// Returns the index of the first digit in <paramref name="chunk"/> that is not a zero, or
-	/// <c>chunk.Length - 1</c> when the chunk is all zeros, so a chunk of zeros compares as a
-	/// single zero digit.
+	/// Reports whether the code point at <paramref name="index"/> is a Unicode decimal digit
+	/// (category <c>Nd</c>), reading a surrogate pair as the one code point it encodes.
 	/// </summary>
-	/// <param name="chunk">The digit chunk to scan.</param>
-	/// <returns>The index at which the chunk's significant digits begin.</returns>
-	private static int SkipLeadingZeros(string chunk)
+	/// <param name="value">The string to read.</param>
+	/// <param name="index">The index of the code point.</param>
+	/// <returns>True if the code point is a decimal digit.</returns>
+	private static bool IsDigitAt(string value, int index) =>
+		CharUnicodeInfo.GetUnicodeCategory(value, index) == UnicodeCategory.DecimalDigitNumber;
+
+	/// <summary>
+	/// Returns how many UTF-16 code units the code point at <paramref name="index"/> takes.
+	/// </summary>
+	/// <param name="value">The string to read.</param>
+	/// <param name="index">The index of the code point.</param>
+	/// <returns>Two for a surrogate pair, otherwise one.</returns>
+	private static int WidthAt(string value, int index) => char.IsSurrogatePair(value, index) ? 2 : 1;
+
+	/// <summary>
+	/// Returns the ASCII digit with the same value as the decimal digit at <paramref name="index"/>.
+	/// </summary>
+	/// <param name="value">The string to read.</param>
+	/// <param name="index">The index of a decimal digit.</param>
+	/// <returns>The digit, rewritten in ASCII.</returns>
+	private static char AsciiDigitAt(string value, int index) =>
+		(char)('0' + CharUnicodeInfo.GetDecimalDigitValue(value, index));
+
+	/// <summary>
+	/// Finds where the run of digits, or of other text, that starts at <paramref name="start"/> ends,
+	/// walking by code point so that a digit encoded as a surrogate pair still counts as a digit.
+	/// </summary>
+	/// <param name="value">The string to scan.</param>
+	/// <param name="start">The index the chunk starts at.</param>
+	/// <param name="isNumeric">Whether the chunk is a run of decimal digits.</param>
+	/// <returns>The index just past the chunk.</returns>
+	private static int ChunkEnd(string value, int start, bool isNumeric)
 	{
-		int index = 0;
-		while (index < chunk.Length - 1 && chunk[index] == '0')
+		int index = start;
+		while (index < value.Length && IsDigitAt(value, index) == isNumeric)
 		{
-			index++;
+			index += WidthAt(value, index);
 		}
 
 		return index;
 	}
 
 	/// <summary>
-	/// A run of decimal digits, held as ASCII digits, or a run of other text.
+	/// Compares two runs of text ordinally, the shorter first when one is a prefix of the other.
 	/// </summary>
-	/// <param name="IsNumeric">Whether the chunk is a run of decimal digits.</param>
-	/// <param name="Value">The chunk's ASCII digits when numeric, otherwise its original text.</param>
-	private readonly record struct Chunk(bool IsNumeric, string Value);
+	/// <param name="x">The first string.</param>
+	/// <param name="xStart">Where its chunk starts.</param>
+	/// <param name="xEnd">Where its chunk ends.</param>
+	/// <param name="y">The second string.</param>
+	/// <param name="yStart">Where its chunk starts.</param>
+	/// <param name="yEnd">Where its chunk ends.</param>
+	/// <returns>A negative number, zero, or a positive number, as for <see cref="Compare"/>.</returns>
+	private static int CompareTextChunks(string x, int xStart, int xEnd, string y, int yStart, int yEnd)
+	{
+		int xLength = xEnd - xStart;
+		int yLength = yEnd - yStart;
+		int comparison = string.CompareOrdinal(x, xStart, y, yStart, Math.Min(xLength, yLength));
+		return comparison != 0 ? comparison : xLength.CompareTo(yLength);
+	}
+
+	/// <summary>
+	/// Compares two runs of decimal digits by the numeric value they spell, rather than by their
+	/// code points.
+	/// </summary>
+	/// <remarks>
+	/// Each digit is read by its value, which is what keeps non-ASCII digit scripts ordering by
+	/// magnitude: <c>'٥'</c> (Arabic-Indic five) is numerically less than <c>'9'</c>, even though its
+	/// code point is far greater.
+	/// </remarks>
+	/// <param name="x">The first string.</param>
+	/// <param name="xStart">Where its digits start.</param>
+	/// <param name="xEnd">Where its digits end.</param>
+	/// <param name="y">The second string.</param>
+	/// <param name="yStart">Where its digits start.</param>
+	/// <param name="yEnd">Where its digits end.</param>
+	/// <returns>A negative number, zero, or a positive number, as for <see cref="Compare"/>.</returns>
+	private static int CompareNumericChunks(string x, int xStart, int xEnd, string y, int yStart, int yEnd)
+	{
+		int xIndex = SkipLeadingZeros(x, xStart, xEnd);
+		int yIndex = SkipLeadingZeros(y, yStart, yEnd);
+
+		// With leading zeros gone, the chunk spelling more digits is the larger number
+		int lengthComparison = CountDigits(x, xIndex, xEnd).CompareTo(CountDigits(y, yIndex, yEnd));
+		if (lengthComparison != 0)
+		{
+			return lengthComparison;
+		}
+
+		// Same digit count, so the first differing digit decides
+		while (xIndex < xEnd)
+		{
+			int digitComparison = AsciiDigitAt(x, xIndex).CompareTo(AsciiDigitAt(y, yIndex));
+			if (digitComparison != 0)
+			{
+				return digitComparison;
+			}
+
+			xIndex += WidthAt(x, xIndex);
+			yIndex += WidthAt(y, yIndex);
+		}
+
+		return 0;
+	}
+
+	/// <summary>
+	/// Counts the digits between <paramref name="start"/> and <paramref name="end"/>, a surrogate pair
+	/// counting as one.
+	/// </summary>
+	/// <param name="value">The string to read.</param>
+	/// <param name="start">Where the digits start.</param>
+	/// <param name="end">Where the digits end.</param>
+	/// <returns>The number of digits.</returns>
+	private static int CountDigits(string value, int start, int end)
+	{
+		int count = 0;
+		for (int index = start; index < end; index += WidthAt(value, index))
+		{
+			count++;
+		}
+
+		return count;
+	}
+
+	/// <summary>
+	/// Returns the index of the first digit in the run that is not a zero, or of its last digit when
+	/// the run is all zeros, so a run of zeros compares as a single zero digit.
+	/// </summary>
+	/// <param name="value">The string to read.</param>
+	/// <param name="start">Where the digits start.</param>
+	/// <param name="end">Where the digits end.</param>
+	/// <returns>The index at which the run's significant digits begin.</returns>
+	private static int SkipLeadingZeros(string value, int start, int end)
+	{
+		int index = start;
+		while (CharUnicodeInfo.GetDecimalDigitValue(value, index) == 0)
+		{
+			int next = index + WidthAt(value, index);
+			if (next >= end)
+			{
+				break;
+			}
+
+			index = next;
+		}
+
+		return index;
+	}
 }
