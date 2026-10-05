@@ -1,6 +1,8 @@
-## v1.0.47
+## v1.0.48 (patch)
 
-No significant changes detected since v1.0.47.
+Changes since v1.0.47:
+
+- [patch] Compare natural strings in place, allocating nothing per comparison ([@Claude](https://github.com/Claude))
 
 ## v1.0.47 (patch)
 
