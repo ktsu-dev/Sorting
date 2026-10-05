@@ -297,4 +297,43 @@ public class NaturalStringComparerTests
 		Assert.IsGreaterThan(0, _comparer.Compare("file\U0001D7D7", "file8"));
 		Assert.AreEqual(0, _comparer.Compare("file\U0001D7D7", "file9"));
 	}
+
+	[TestMethod]
+	public void Compare_AllocatesNothing()
+	{
+		// A sort makes O(n log n) comparisons, so anything a comparison allocates is paid that many
+		// times over. Pairs cover text, ASCII and non-ASCII numbers, leading zeros, surrogate pairs,
+		// and a number against text.
+		(string X, string Y)[] pairs =
+		[
+			("file2.txt", "file10.txt"),
+			("img007-final", "img7-draft"),
+			("a\u0665b", "a5c"),
+			("file\U0001D7D7", "file\U0001D7CF\U0001D7CE"),
+			("5a", "a5"),
+			("00000000000000000000000000000001", "1"),
+			("same prefix, longer", "same prefix"),
+		];
+
+		// Warm up first, so that what is measured is the comparing rather than anything the runtime
+		// does the first time a method is called.
+		foreach ((string x, string y) in pairs)
+		{
+			_comparer.Compare(x, y);
+		}
+
+		long before = GC.GetAllocatedBytesForCurrentThread();
+		for (int iteration = 0; iteration < 1000; iteration++)
+		{
+			foreach ((string x, string y) in pairs)
+			{
+				_comparer.Compare(x, y);
+				_comparer.Compare(y, x);
+			}
+		}
+
+		long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+		Assert.AreEqual(0L, allocated, $"{allocated} bytes allocated over {pairs.Length * 2000} comparisons");
+	}
 }
