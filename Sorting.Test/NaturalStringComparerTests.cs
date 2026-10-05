@@ -97,8 +97,83 @@ public class NaturalStringComparerTests
 	public void Compare_StringsWithLeadingZeros_HandledCorrectly()
 	{
 		// Numbers with leading zeros should be treated as numeric values
-		Assert.AreEqual(0, _comparer.Compare("file005", "file5")); // Numerically equal
+		AssertTiedOnlyByOrdinal("file005", "file5"); // Numerically equal, but distinct strings
 		Assert.IsLessThan(0, _comparer.Compare("file005", "file06")); // 5 < 6 numerically
+	}
+
+	[TestMethod]
+	public void Compare_NumericallyEqualStrings_AreNotEqual()
+	{
+		// Only ordinally equal strings may compare as zero, or sorted collections treat them as one key
+		string[] values = ["file5", "file05", "file005", "file٥", "v1", "v01", "file5", "a"];
+		foreach (string x in values)
+		{
+			foreach (string y in values)
+			{
+				Assert.AreEqual(string.Equals(x, y, StringComparison.Ordinal), _comparer.Compare(x, y) == 0, $"Compare(\"{x}\", \"{y}\")");
+			}
+		}
+	}
+
+	[TestMethod]
+	public void Compare_NumericallyEqualStrings_StayBetweenTheirNeighbours()
+	{
+		// The tie-break only orders numerically equal strings among themselves
+		foreach (string tied in new[] { "file5", "file05", "file005", "file٥" })
+		{
+			Assert.IsLessThan(0, _comparer.Compare("file4", tied));
+			Assert.IsGreaterThan(0, _comparer.Compare("file6", tied));
+		}
+	}
+
+	[TestMethod]
+	public void SortedSet_KeepsStringsThatDifferOnlyInLeadingZeros()
+	{
+		SortedSet<string> set = new(_comparer) { "file5", "file05", "file005" };
+
+		Assert.HasCount(3, set);
+	}
+
+	[TestMethod]
+	public void SortedDictionary_AcceptsKeysThatDifferOnlyInLeadingZeros()
+	{
+		SortedDictionary<string, int> dictionary = new(_comparer)
+		{
+			["v1"] = 1,
+		};
+		dictionary.Add("v01", 2);
+
+		Assert.HasCount(2, dictionary);
+	}
+
+	[TestMethod]
+	public void Sort_IsTheSameForEveryInputOrder()
+	{
+		string[][] permutations =
+		[
+			["a", "b5", "b05"],
+			["a", "b05", "b5"],
+			["b5", "a", "b05"],
+			["b5", "b05", "a"],
+			["b05", "a", "b5"],
+			["b05", "b5", "a"],
+		];
+
+		string[] expected = [.. permutations[0].OrderBy(s => s, _comparer)];
+		foreach (string[] permutation in permutations)
+		{
+			Array.Sort(permutation, _comparer);
+			CollectionAssert.AreEqual(expected, permutation);
+		}
+	}
+
+	private void AssertTiedOnlyByOrdinal(string x, string y)
+	{
+		// Numerically equal but distinct strings compare by ordinal, never as equal
+		int expected = Math.Sign(string.CompareOrdinal(x, y));
+		Assert.AreNotEqual(0, expected);
+		Assert.AreEqual(expected, Math.Sign(_comparer.Compare(x, y)), $"Compare(\"{x}\", \"{y}\")");
+		Assert.AreEqual(-expected, Math.Sign(_comparer.Compare(y, x)), $"Compare(\"{y}\", \"{x}\")");
 	}
 
 	[TestMethod]
@@ -116,22 +191,22 @@ public class NaturalStringComparerTests
 	}
 
 	[TestMethod]
-	public void Compare_NonAsciiDigits_EqualValuesAreEqual()
+	public void Compare_NonAsciiDigits_EqualValuesAreTiedOrdinally()
 	{
 		// Arabic-Indic five and ASCII five spell the same number
-		Assert.AreEqual(0, _comparer.Compare("٥", "5"));
-		Assert.AreEqual(0, _comparer.Compare("file٥", "file5"));
+		AssertTiedOnlyByOrdinal("٥", "5");
+		AssertTiedOnlyByOrdinal("file٥", "file5");
 	}
 
 	[TestMethod]
 	public void Compare_NonAsciiLeadingZeros_NormalizedLikeAsciiZeros()
 	{
 		// An Arabic-Indic zero is a leading zero, so both chunks reduce to the single digit 0
-		Assert.AreEqual(0, _comparer.Compare("٠0", "0"));
-		Assert.AreEqual(0, _comparer.Compare("٠٥", "5"));
+		AssertTiedOnlyByOrdinal("٠0", "0");
+		AssertTiedOnlyByOrdinal("٠٥", "5");
 
 		// An all-zeros chunk compares as zero, whatever the script
-		Assert.AreEqual(0, _comparer.Compare("٠٠", "0"));
+		AssertTiedOnlyByOrdinal("٠٠", "0");
 		Assert.IsLessThan(0, _comparer.Compare("٠٠", "1"));
 	}
 
@@ -140,7 +215,7 @@ public class NaturalStringComparerTests
 	{
 		// A single chunk may mix scripts; it still spells one number
 		Assert.IsLessThan(0, _comparer.Compare("file1٥", "file20")); // 15 < 20
-		Assert.AreEqual(0, _comparer.Compare("file1٥", "file15"));
+		AssertTiedOnlyByOrdinal("file1٥", "file15");
 	}
 
 	[TestMethod]
@@ -295,7 +370,7 @@ public class NaturalStringComparerTests
 		Assert.IsLessThan(0, _comparer.Compare("file\U0001D7D7", "file\U0001D7CF\U0001D7CE"));
 		Assert.IsLessThan(0, _comparer.Compare("file\U0001D7D7", "file10"));
 		Assert.IsGreaterThan(0, _comparer.Compare("file\U0001D7D7", "file8"));
-		Assert.AreEqual(0, _comparer.Compare("file\U0001D7D7", "file9"));
+		AssertTiedOnlyByOrdinal("file\U0001D7D7", "file9");
 	}
 
 	[TestMethod]

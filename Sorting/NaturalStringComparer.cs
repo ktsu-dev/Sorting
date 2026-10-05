@@ -22,7 +22,8 @@ public partial class NaturalStringComparer : IComparer<string?>
 	/// <param name="y">Second string to compare.</param>
 	/// <returns>
 	/// Less than zero if x is less than y.
-	/// Zero if x equals y.
+	/// Zero only if x and y are ordinally equal; strings whose numbers differ only in leading zeros or
+	/// digit script are ordered next to each other, ordinally.
 	/// Greater than zero if x is greater than y.
 	/// </returns>
 	public int Compare(string? x, string? y)
@@ -91,7 +92,15 @@ public partial class NaturalStringComparer : IComparer<string?>
 		}
 
 		// If we've exhausted one sequence but not the other, the shorter one comes first
-		return xIndex < x.Length ? 1 : yIndex < y.Length ? -1 : 0;
+		if (xIndex < x.Length || yIndex < y.Length)
+		{
+			return xIndex < x.Length ? 1 : -1;
+		}
+
+		// Every chunk matched, but the strings differ in leading zeros or digit script ("file5" and
+		// "file005"). Break the tie ordinally so distinct strings never compare equal, which sorted
+		// collections would take to mean the same key.
+		return string.CompareOrdinal(x, y);
 	}
 
 	/// <summary>
