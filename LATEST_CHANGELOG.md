@@ -1,6 +1,4 @@
-## v1.0.49 (patch)
+## v1.0.49
 
-Changes since v1.0.48:
-
-- [patch] Break natural-order ties ordinally so distinct strings never compare equal ([@Claude](https://github.com/Claude))
+No significant changes detected since v1.0.49.
 
