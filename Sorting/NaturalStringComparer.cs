@@ -150,7 +150,9 @@ public partial class NaturalStringComparer : IComparer<string?>
 	}
 
 	/// <summary>
-	/// Compares two runs of text ordinally, the shorter first when one is a prefix of the other.
+	/// Compares two runs of text ordinally. When one is a prefix of the other, the shorter run's string
+	/// either ends there, and comes first, or goes on with a number, whose first digit (as ASCII) is
+	/// compared with the longer run's next character, just as the plain characters would be.
 	/// </summary>
 	/// <param name="x">The first string.</param>
 	/// <param name="xStart">Where its chunk starts.</param>
@@ -164,7 +166,19 @@ public partial class NaturalStringComparer : IComparer<string?>
 		int xLength = xEnd - xStart;
 		int yLength = yEnd - yStart;
 		int comparison = string.CompareOrdinal(x, xStart, y, yStart, Math.Min(xLength, yLength));
-		return comparison != 0 ? comparison : xLength.CompareTo(yLength);
+		if (comparison != 0 || xLength == yLength)
+		{
+			return comparison;
+		}
+
+		// "file.txt" against "file" then "1": the '.' meets the '1', not the end of "file". A text chunk
+		// never holds a digit, so the two characters always differ.
+		if (xLength < yLength)
+		{
+			return xEnd < x.Length ? AsciiDigitAt(x, xEnd).CompareTo(y[yStart + xLength]) : -1;
+		}
+
+		return yEnd < y.Length ? x[xStart + yLength].CompareTo(AsciiDigitAt(y, yEnd)) : 1;
 	}
 
 	/// <summary>

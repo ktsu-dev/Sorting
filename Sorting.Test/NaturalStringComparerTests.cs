@@ -321,6 +321,32 @@ public class NaturalStringComparerTests
 	}
 
 	[TestMethod]
+	public void Compare_TextThatExtendsTheOtherSidesText_ComparesItsNextCharacterWithTheNumber()
+	{
+		// "file.txt" against "file1.txt": the chunk "file.txt" extends "file", so the '.' meets the '1'
+		// and sorts first, as it would as plain characters. The longer chunk used to lose outright.
+		Assert.IsLessThan(0, _comparer.Compare("file.txt", "file1.txt"));
+		Assert.IsGreaterThan(0, _comparer.Compare("file1.txt", "file.txt"));
+		Assert.IsLessThan(0, _comparer.Compare("file-1", "file1"));
+		Assert.IsLessThan(0, _comparer.Compare("file 2", "file10"));
+		Assert.IsLessThan(0, _comparer.Compare("a!", "a5"));
+		Assert.IsLessThan(0, _comparer.Compare("a!", "a٥"));
+
+		// A character above the digits still sorts after the number, and a string that ends first still wins.
+		Assert.IsGreaterThan(0, _comparer.Compare("filea", "file1"));
+		Assert.IsLessThan(0, _comparer.Compare("file", "file.txt"));
+	}
+
+	[TestMethod]
+	public void Sort_PutsABaseNameBeforeItsNumberedSiblings()
+	{
+		string[] expected = ["report.pdf", "report1.pdf", "report2.pdf", "report10.pdf"];
+		string[] values = ["report10.pdf", "report2.pdf", "report.pdf", "report1.pdf"];
+		Array.Sort(values, _comparer);
+		CollectionAssert.AreEqual(expected, values);
+	}
+
+	[TestMethod]
 	public void Compare_SortOfMixedScriptDigitsAndText_DoesNotDependOnInputOrder()
 	{
 		string[] expected = ["\u0665", "10", "z"];
@@ -342,6 +368,7 @@ public class NaturalStringComparerTests
 			"", "0", "5", "05", "10", "\u0665", "\u0661\u0660", "\U0001D7D7", "\U0001D7CF\U0001D7CE",
 			"\u0969", "a", "z", "Z", " ", "-", "_", "~", "\u00e9", "\U0001F600",
 			"a5", "a\u0665", "a10", "a-", "a z", "5a", "\u0665a", "10a", "-5", "~5",
+			"a!", "a.b", "a.5", "a\u0665.b", "a~", "az", "a 2", "a-1",
 		];
 
 		foreach (string a in values)
