@@ -1,3 +1,9 @@
+## v1.0.50 (patch)
+
+Changes since v1.0.49:
+
+- Sort a base name before its numbered siblings [patch] ([@Claude](https://github.com/Claude))
+
 ## v1.0.50-pre.1 (prerelease)
 
 Changes since v1.0.49:
