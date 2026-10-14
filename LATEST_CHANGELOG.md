@@ -2,5 +2,5 @@
 
 Changes since v1.0.49:
 
-- Sort a base name before its numbered siblings [patch] ([@Claude](https://github.com/Claude))
+- Sort a base name before its numbered siblings [patch] (Claude)
 
