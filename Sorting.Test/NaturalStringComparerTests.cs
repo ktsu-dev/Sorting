@@ -4,6 +4,7 @@
 
 namespace ktsu.Sorting.Tests;
 
+using System.Collections;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]
@@ -437,5 +438,57 @@ public class NaturalStringComparerTests
 		long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
 		Assert.AreEqual(0L, allocated, $"{allocated} bytes allocated over {pairs.Length * 2000} comparisons");
+	}
+
+	[TestMethod]
+	public void NonGenericComparer_SortsAnArrayListNaturally()
+	{
+		ArrayList list = ["file10.txt", "file2.txt", null, "file1.txt"];
+
+		list.Sort(NonGeneric());
+
+		CollectionAssert.AreEqual(new object?[] { null, "file1.txt", "file2.txt", "file10.txt" }, list);
+	}
+
+	[TestMethod]
+	public void NonGenericComparer_OrdersLikeTheGenericCompare()
+	{
+		IComparer nonGeneric = NonGeneric();
+		string?[] values = [null, "", "file5", "file005", "file10", "file\u0665", "a5c", "5a", "File2"];
+		foreach (string? x in values)
+		{
+			foreach (string? y in values)
+			{
+				Assert.AreEqual(Math.Sign(_comparer.Compare(x, y)), Math.Sign(nonGeneric.Compare(x, y)), $"\"{x}\" vs \"{y}\"");
+			}
+		}
+	}
+
+	[TestMethod]
+	public void NonGenericComparer_SortsAnObjectArrayNaturally()
+	{
+		object[] items = ["img12", "img007", "img7", "img1"];
+
+		Array.Sort(items, NonGeneric());
+
+		CollectionAssert.AreEqual(new object[] { "img1", "img007", "img7", "img12" }, items);
+	}
+
+	[TestMethod]
+	public void NonGenericComparer_ThrowsForArgumentsThatAreNotStrings()
+	{
+		IComparer nonGeneric = NonGeneric();
+
+		Assert.ThrowsExactly<ArgumentException>(() => nonGeneric.Compare(5, "file"));
+		Assert.ThrowsExactly<ArgumentException>(() => nonGeneric.Compare("file", 5));
+	}
+
+	private IComparer NonGeneric()
+	{
+		// Checked at run time, so the tests build, and fail, against a comparer without the interface.
+		object comparer = _comparer;
+		IComparer? nonGeneric = comparer as IComparer;
+		Assert.IsNotNull(nonGeneric, "NaturalStringComparer doesn't implement System.Collections.IComparer");
+		return nonGeneric;
 	}
 }
