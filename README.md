@@ -74,6 +74,22 @@ Array.Sort(files, comparer);
 var sortedFiles = files.OrderBy(file => file, new NaturalStringComparer());
 ```
 
+### Ignoring case
+
+By default text is compared ordinally, so every uppercase letter sorts before every lowercase one. Use `NaturalStringComparer.OrdinalIgnoreCase` (or `new NaturalStringComparer(ignoreCase: true)`) to list names the way Windows Explorer and Finder do:
+
+```csharp
+string[] files = { "file10.txt", "File2.txt", "file1.txt", "README.md", "build3.log", "Build20.log" };
+
+Array.Sort(files, NaturalStringComparer.Ordinal);
+// "Build20.log", "File2.txt", "README.md", "build3.log", "file1.txt", "file10.txt"
+
+Array.Sort(files, NaturalStringComparer.OrdinalIgnoreCase);
+// "build3.log", "Build20.log", "file1.txt", "File2.txt", "file10.txt", "README.md"
+```
+
+Strings that differ only in case are still never equal under `OrdinalIgnoreCase`. They are ordered next to each other, ordinally, so a `SortedSet<string>` keeps both `file1` and `File1`.
+
 ## Features
 
 ### NaturalStringComparer
