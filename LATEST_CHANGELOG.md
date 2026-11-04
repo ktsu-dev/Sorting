@@ -2,6 +2,7 @@
 
 Changes since v1.0.0:
 
+- Add an ignore-case option to NaturalStringComparer [minor] (#76) (matt-edmondson)
 - Implement the non-generic IComparer on NaturalStringComparer [minor] (#75) (matt-edmondson)
 - Regenerate CompatibilitySuppressions.xml after the Polyfill 11.4.5 bump [patch] (#73) (matt-edmondson)
 - Sort a base name before its numbered siblings [patch] (Claude)
