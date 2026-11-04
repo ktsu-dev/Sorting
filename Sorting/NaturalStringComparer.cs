@@ -13,11 +13,40 @@ using System.Globalization;
 /// in and whether or not it lies outside the Basic Multilingual Plane, and is compared by the value
 /// it spells rather than by its code points. A number compared with text orders exactly as the
 /// equivalent ASCII digits would, so every digit script sorts in the same place relative to text.
+/// By default text is compared ordinally, so every uppercase letter sorts before every lowercase one;
+/// <see cref="OrdinalIgnoreCase"/> compares it ignoring case instead, the way file managers list names.
 /// The comparer also implements the non-generic <see cref="IComparer"/>, so it can be handed to APIs
 /// that accept only that, such as <see cref="ArrayList.Sort(IComparer)"/>.
 /// </remarks>
-public partial class NaturalStringComparer : IComparer<string?>, IComparer
+/// <param name="ignoreCase">
+/// Whether text is compared ignoring case, as <see cref="StringComparison.OrdinalIgnoreCase"/> folds it.
+/// Strings that differ only in case are still never equal: they are ordered next to each other,
+/// ordinally.
+/// </param>
+public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>, IComparer
 {
+	/// <summary>
+	/// Gets a comparer that compares text ordinally, so case matters. This is what
+	/// <see cref="NaturalStringComparer()"/> creates.
+	/// </summary>
+	public static NaturalStringComparer Ordinal { get; } = new(ignoreCase: false);
+
+	/// <summary>
+	/// Gets a comparer that compares text ordinally ignoring case, so <c>"build3"</c> sorts before
+	/// <c>"Build20"</c>. Strings that differ only in case are still never equal: they are ordered
+	/// next to each other, ordinally.
+	/// </summary>
+	public static NaturalStringComparer OrdinalIgnoreCase { get; } = new(ignoreCase: true);
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="NaturalStringComparer"/> class that compares text
+	/// ordinally, so case matters.
+	/// </summary>
+	public NaturalStringComparer()
+		: this(ignoreCase: false)
+	{
+	}
+
 	/// <summary>
 	/// Compares two strings using natural sorting, where embedded numbers are compared as numeric values.
 	/// </summary>
@@ -26,7 +55,8 @@ public partial class NaturalStringComparer : IComparer<string?>, IComparer
 	/// <returns>
 	/// Less than zero if x is less than y.
 	/// Zero only if x and y are ordinally equal; strings whose numbers differ only in leading zeros or
-	/// digit script are ordered next to each other, ordinally.
+	/// digit script, or that differ only in case when case is ignored, are ordered next to each other,
+	/// ordinally.
 	/// Greater than zero if x is greater than y.
 	/// </returns>
 	public int Compare(string? x, string? y)
@@ -76,8 +106,8 @@ public partial class NaturalStringComparer : IComparer<string?>, IComparer
 				// own code point here would sort it after letters while its ASCII equal sorts before
 				// them, which makes the order intransitive.
 				comparison = xIsNumeric
-					? AsciiDigitAt(x, xIndex).CompareTo(y[yIndex])
-					: x[xIndex].CompareTo(AsciiDigitAt(y, yIndex));
+					? AsciiDigitAt(x, xIndex).CompareTo(Fold(y[yIndex]))
+					: Fold(x[xIndex]).CompareTo(AsciiDigitAt(y, yIndex));
 			}
 			else
 			{
@@ -101,7 +131,7 @@ public partial class NaturalStringComparer : IComparer<string?>, IComparer
 		}
 
 		// Every chunk matched, but the strings differ in leading zeros or digit script ("file5" and
-		// "file005"). Break the tie ordinally so distinct strings never compare equal, which sorted
+		// "file005"), or only in case when case is ignored ("file5" and "File5"). Break the tie ordinally so distinct strings never compare equal, which sorted
 		// collections would take to mean the same key.
 		return string.CompareOrdinal(x, y);
 	}
@@ -189,25 +219,61 @@ public partial class NaturalStringComparer : IComparer<string?>, IComparer
 	/// <param name="yStart">Where its chunk starts.</param>
 	/// <param name="yEnd">Where its chunk ends.</param>
 	/// <returns>A negative number, zero, or a positive number, as for <see cref="Compare"/>.</returns>
-	private static int CompareTextChunks(string x, int xStart, int xEnd, string y, int yStart, int yEnd)
+	private int CompareTextChunks(string x, int xStart, int xEnd, string y, int yStart, int yEnd)
 	{
 		int xLength = xEnd - xStart;
 		int yLength = yEnd - yStart;
-		int comparison = string.CompareOrdinal(x, xStart, y, yStart, Math.Min(xLength, yLength));
+		int length = Math.Min(xLength, yLength);
+		int comparison = ignoreCase
+			? CompareFolded(x, xStart, y, yStart, length)
+			: string.CompareOrdinal(x, xStart, y, yStart, length);
 		if (comparison != 0 || xLength == yLength)
 		{
 			return comparison;
 		}
 
 		// "file.txt" against "file" then "1": the '.' meets the '1', not the end of "file". A text chunk
-		// never holds a digit, so the two characters always differ.
+		// never holds a digit, and folding never makes a digit, so the two characters always differ.
 		if (xLength < yLength)
 		{
-			return xEnd < x.Length ? AsciiDigitAt(x, xEnd).CompareTo(y[yStart + xLength]) : -1;
+			return xEnd < x.Length ? AsciiDigitAt(x, xEnd).CompareTo(Fold(y[yStart + xLength])) : -1;
 		}
 
-		return yEnd < y.Length ? x[xStart + yLength].CompareTo(AsciiDigitAt(y, yEnd)) : 1;
+		return yEnd < y.Length ? Fold(x[xStart + yLength]).CompareTo(AsciiDigitAt(y, yEnd)) : 1;
 	}
+
+	/// <summary>
+	/// Compares <paramref name="length"/> characters of two strings one at a time, each folded to upper
+	/// case as <see cref="StringComparison.OrdinalIgnoreCase"/> folds it.
+	/// </summary>
+	/// <param name="x">The first string.</param>
+	/// <param name="xStart">Where to start reading it.</param>
+	/// <param name="y">The second string.</param>
+	/// <param name="yStart">Where to start reading it.</param>
+	/// <param name="length">How many characters to compare.</param>
+	/// <returns>A negative number, zero, or a positive number, as for <see cref="Compare"/>.</returns>
+	private static int CompareFolded(string x, int xStart, string y, int yStart, int length)
+	{
+		for (int offset = 0; offset < length; offset++)
+		{
+			int comparison = char.ToUpperInvariant(x[xStart + offset]).CompareTo(char.ToUpperInvariant(y[yStart + offset]));
+			if (comparison != 0)
+			{
+				return comparison;
+			}
+		}
+
+		return 0;
+	}
+
+	/// <summary>
+	/// Returns the character text is compared by: <paramref name="value"/> itself, or its upper case
+	/// form when case is ignored. Every comparison of a text character goes through here, including
+	/// against a number's first digit, so the order stays transitive whichever way case is handled.
+	/// </summary>
+	/// <param name="value">A character from a text chunk.</param>
+	/// <returns>The character to compare.</returns>
+	private char Fold(char value) => ignoreCase ? char.ToUpperInvariant(value) : value;
 
 	/// <summary>
 	/// Compares two runs of decimal digits by the numeric value they spell, rather than by their
