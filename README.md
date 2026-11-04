@@ -90,6 +90,8 @@ Array.Sort(files, NaturalStringComparer.OrdinalIgnoreCase);
 
 Strings that differ only in case are still never equal under `OrdinalIgnoreCase`. They are ordered next to each other, ordinally, so a `SortedSet<string>` keeps both `file1` and `File1`.
 
+Letters outside the Basic Multilingual Plane fold too, by code point, so names in Adlam, Deseret or Osage interleave the same way Latin names do. Folded text is still ordered by UTF-16 code unit, as `Ordinal` orders it, so U+E000 to U+FFFF sort after those letters, where `string.Compare(..., StringComparison.OrdinalIgnoreCase)` puts them before.
+
 ## Features
 
 ### NaturalStringComparer
