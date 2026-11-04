@@ -97,6 +97,7 @@ Strings that differ only in case are still never equal under `OrdinalIgnoreCase`
 - Handles mixed alphanumeric strings
 - Properly compares strings with leading zeros
 - Fully compatible with .NET's `IComparer<string>` interface
+- Also implements the non-generic `System.Collections.IComparer`, for APIs that accept only that: `ArrayList.Sort`, WPF's `ListCollectionView.CustomSort`, WinForms' `ListView.ListViewItemSorter`. Arguments that aren't strings throw `ArgumentException`
 - Can be used with `Array.Sort()`, LINQ's `OrderBy()`, and other sorting mechanisms
 
 ## Examples

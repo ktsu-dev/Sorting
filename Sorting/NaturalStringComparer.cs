@@ -2,6 +2,7 @@
 
 namespace ktsu.Sorting;
 
+using System.Collections;
 using System.Globalization;
 
 /// <summary>
@@ -14,13 +15,15 @@ using System.Globalization;
 /// equivalent ASCII digits would, so every digit script sorts in the same place relative to text.
 /// By default text is compared ordinally, so every uppercase letter sorts before every lowercase one;
 /// <see cref="OrdinalIgnoreCase"/> compares it ignoring case instead, the way file managers list names.
+/// The comparer also implements the non-generic <see cref="IComparer"/>, so it can be handed to APIs
+/// that accept only that, such as <see cref="ArrayList.Sort(IComparer)"/>.
 /// </remarks>
 /// <param name="ignoreCase">
 /// Whether text is compared ignoring case, as <see cref="StringComparison.OrdinalIgnoreCase"/> folds it.
 /// Strings that differ only in case are still never equal: they are ordered next to each other,
 /// ordinally.
 /// </param>
-public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
+public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>, IComparer
 {
 	/// <summary>
 	/// Gets a comparer that compares text ordinally, so case matters. This is what
@@ -131,6 +134,31 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 		// "file005"), or only in case when case is ignored ("file5" and "File5"). Break the tie ordinally so distinct strings never compare equal, which sorted
 		// collections would take to mean the same key.
 		return string.CompareOrdinal(x, y);
+	}
+
+	/// <summary>
+	/// Compares two objects that are strings or <see langword="null"/>, exactly as
+	/// <see cref="Compare(string, string)"/> does.
+	/// </summary>
+	/// <param name="x">First object to compare.</param>
+	/// <param name="y">Second object to compare.</param>
+	/// <returns>The result of <see cref="Compare(string, string)"/> on the two strings.</returns>
+	/// <exception cref="ArgumentException">
+	/// An argument is neither a string nor <see langword="null"/>.
+	/// </exception>
+	int IComparer.Compare(object? x, object? y)
+	{
+		if (x is not (null or string))
+		{
+			throw new ArgumentException($"{nameof(NaturalStringComparer)} compares only strings, not {x.GetType()}.", nameof(x));
+		}
+
+		if (y is not (null or string))
+		{
+			throw new ArgumentException($"{nameof(NaturalStringComparer)} compares only strings, not {y.GetType()}.", nameof(y));
+		}
+
+		return Compare((string?)x, (string?)y);
 	}
 
 	/// <summary>
