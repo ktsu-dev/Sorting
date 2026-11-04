@@ -2,6 +2,7 @@
 
 namespace ktsu.Sorting;
 
+using System.Collections;
 using System.Globalization;
 
 /// <summary>
@@ -12,8 +13,10 @@ using System.Globalization;
 /// in and whether or not it lies outside the Basic Multilingual Plane, and is compared by the value
 /// it spells rather than by its code points. A number compared with text orders exactly as the
 /// equivalent ASCII digits would, so every digit script sorts in the same place relative to text.
+/// The comparer also implements the non-generic <see cref="IComparer"/>, so it can be handed to APIs
+/// that accept only that, such as <see cref="ArrayList.Sort(IComparer)"/>.
 /// </remarks>
-public partial class NaturalStringComparer : IComparer<string?>
+public partial class NaturalStringComparer : IComparer<string?>, IComparer
 {
 	/// <summary>
 	/// Compares two strings using natural sorting, where embedded numbers are compared as numeric values.
@@ -101,6 +104,31 @@ public partial class NaturalStringComparer : IComparer<string?>
 		// "file005"). Break the tie ordinally so distinct strings never compare equal, which sorted
 		// collections would take to mean the same key.
 		return string.CompareOrdinal(x, y);
+	}
+
+	/// <summary>
+	/// Compares two objects that are strings or <see langword="null"/>, exactly as
+	/// <see cref="Compare(string, string)"/> does.
+	/// </summary>
+	/// <param name="x">First object to compare.</param>
+	/// <param name="y">Second object to compare.</param>
+	/// <returns>The result of <see cref="Compare(string, string)"/> on the two strings.</returns>
+	/// <exception cref="ArgumentException">
+	/// An argument is neither a string nor <see langword="null"/>.
+	/// </exception>
+	int IComparer.Compare(object? x, object? y)
+	{
+		if (x is not (null or string))
+		{
+			throw new ArgumentException($"{nameof(NaturalStringComparer)} compares only strings, not {x.GetType()}.", nameof(x));
+		}
+
+		if (y is not (null or string))
+		{
+			throw new ArgumentException($"{nameof(NaturalStringComparer)} compares only strings, not {y.GetType()}.", nameof(y));
+		}
+
+		return Compare((string?)x, (string?)y);
 	}
 
 	/// <summary>

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ktsu.Sorting is a .NET library providing advanced sorting utilities for specialized sorting scenarios. The primary component is `NaturalStringComparer`, which implements `IComparer<string?>` to sort strings containing embedded numbers in a human-friendly order (e.g., "file2" before "file10").
+ktsu.Sorting is a .NET library providing advanced sorting utilities for specialized sorting scenarios. The primary component is `NaturalStringComparer`, which implements `IComparer<string?>` (and the non-generic `IComparer`) to sort strings containing embedded numbers in a human-friendly order (e.g., "file2" before "file10").
 
 ## Build Commands
 
