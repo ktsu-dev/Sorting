@@ -106,8 +106,8 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 				// own code point here would sort it after letters while its ASCII equal sorts before
 				// them, which makes the order intransitive.
 				comparison = xIsNumeric
-					? AsciiDigitAt(x, xIndex).CompareTo(Fold(y[yIndex]))
-					: Fold(x[xIndex]).CompareTo(AsciiDigitAt(y, yIndex));
+					? AsciiDigitAt(x, xIndex).CompareTo(Fold(y, yIndex))
+					: Fold(x, xIndex).CompareTo(AsciiDigitAt(y, yIndex));
 			}
 			else
 			{
@@ -236,16 +236,26 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 		// never holds a digit, and folding never makes a digit, so the two characters always differ.
 		if (xLength < yLength)
 		{
-			return xEnd < x.Length ? AsciiDigitAt(x, xEnd).CompareTo(Fold(y[yStart + xLength])) : -1;
+			return xEnd < x.Length ? AsciiDigitAt(x, xEnd).CompareTo(Fold(y, yStart + xLength)) : -1;
 		}
 
-		return yEnd < y.Length ? Fold(x[xStart + yLength]).CompareTo(AsciiDigitAt(y, yEnd)) : 1;
+		return yEnd < y.Length ? Fold(x, xStart + yLength).CompareTo(AsciiDigitAt(y, yEnd)) : 1;
 	}
 
 	/// <summary>
-	/// Compares <paramref name="length"/> characters of two strings one at a time, each folded to upper
-	/// case as <see cref="StringComparison.OrdinalIgnoreCase"/> folds it.
+	/// Compares <paramref name="length"/> UTF-16 code units of two strings one at a time, each folded to
+	/// upper case as <see cref="StringComparison.OrdinalIgnoreCase"/> folds it.
 	/// </summary>
+	/// <remarks>
+	/// A surrogate pair is folded as the one code point it encodes, so letters outside the Basic
+	/// Multilingual Plane (Adlam, Deseret, Osage) fold too, and the folded pair is then compared a code
+	/// unit at a time, just as <see cref="string.CompareOrdinal(string, string)"/> orders unfolded text.
+	/// That keeps U+E000 to U+FFFF after every surrogate pair, where
+	/// <see cref="StringComparison.OrdinalIgnoreCase"/> puts them before, but it means both modes and the
+	/// ordinal tiebreak order code points the same way. Folding never changes how many code units a code
+	/// point takes, so a pair that straddles the end of the shorter chunk compares the same way it would
+	/// within one chunk.
+	/// </remarks>
 	/// <param name="x">The first string.</param>
 	/// <param name="xStart">Where to start reading it.</param>
 	/// <param name="y">The second string.</param>
@@ -256,7 +266,7 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 	{
 		for (int offset = 0; offset < length; offset++)
 		{
-			int comparison = char.ToUpperInvariant(x[xStart + offset]).CompareTo(char.ToUpperInvariant(y[yStart + offset]));
+			int comparison = FoldIgnoringCase(x, xStart + offset).CompareTo(FoldIgnoringCase(y, yStart + offset));
 			if (comparison != 0)
 			{
 				return comparison;
@@ -267,13 +277,70 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 	}
 
 	/// <summary>
-	/// Returns the character text is compared by: <paramref name="value"/> itself, or its upper case
-	/// form when case is ignored. Every comparison of a text character goes through here, including
-	/// against a number's first digit, so the order stays transitive whichever way case is handled.
+	/// Returns the code unit text is compared by: the one at <paramref name="index"/> itself, or its
+	/// upper case form when case is ignored. Every comparison of a text character goes through here,
+	/// including against a number's first digit, so the order stays transitive whichever way case is
+	/// handled.
 	/// </summary>
-	/// <param name="value">A character from a text chunk.</param>
-	/// <returns>The character to compare.</returns>
-	private char Fold(char value) => ignoreCase ? char.ToUpperInvariant(value) : value;
+	/// <param name="value">The string to read.</param>
+	/// <param name="index">The index of a code unit in a text chunk.</param>
+	/// <returns>The code unit to compare.</returns>
+	private char Fold(string value, int index) => ignoreCase ? FoldIgnoringCase(value, index) : value[index];
+
+	/// <summary>
+	/// Returns the code unit at <paramref name="index"/> once the code point it belongs to is folded to
+	/// upper case, reading a surrogate pair as the one code point it encodes. That is how
+	/// <see cref="StringComparison.OrdinalIgnoreCase"/> folds text since .NET 5, so U+10428 (Deseret
+	/// small letter long I) folds to U+10400. A lone surrogate is left as it is.
+	/// </summary>
+	/// <param name="value">The string to read.</param>
+	/// <param name="index">The index of the code unit.</param>
+	/// <returns>The folded code unit.</returns>
+	private static char FoldIgnoringCase(string value, int index)
+	{
+		char unit = value[index];
+		if (!char.IsSurrogate(unit))
+		{
+			return char.ToUpperInvariant(unit);
+		}
+
+		int pairStart = char.IsHighSurrogate(unit) ? index : index - 1;
+		if (pairStart < 0 || !char.IsSurrogatePair(value, pairStart))
+		{
+			return unit;
+		}
+
+		int folded = ToUpperInvariant(char.ConvertToUtf32(value, pairStart));
+
+		// No supplementary letter's upper case lies in the Basic Multilingual Plane, but should one ever
+		// do so, leaving the pair unfolded keeps both of its code units in step.
+		if (folded < 0x10000)
+		{
+			return unit;
+		}
+
+		int offset = folded - 0x10000;
+		return pairStart == index
+			? (char)(0xD800 + (offset >> 10))
+			: (char)(0xDC00 + (offset & 0x3FF));
+	}
+
+	/// <summary>
+	/// Folds a code point outside the Basic Multilingual Plane to upper case, invariantly.
+	/// </summary>
+	/// <param name="codePoint">A supplementary code point.</param>
+	/// <returns>Its upper case form, or <paramref name="codePoint"/> itself.</returns>
+	private static int ToUpperInvariant(int codePoint)
+	{
+#if NET
+		return System.Text.Rune.ToUpperInvariant(new System.Text.Rune(codePoint)).Value;
+#else
+		// netstandard has no Rune, so fold the pair as a string. That allocates, but only for a
+		// surrogate pair in a text chunk compared ignoring case.
+		string upper = CultureInfo.InvariantCulture.TextInfo.ToUpper(char.ConvertFromUtf32(codePoint));
+		return upper.Length == 2 && char.IsSurrogatePair(upper, 0) ? char.ConvertToUtf32(upper, 0) : codePoint;
+#endif
+	}
 
 	/// <summary>
 	/// Compares two runs of decimal digits by the numeric value they spell, rather than by their

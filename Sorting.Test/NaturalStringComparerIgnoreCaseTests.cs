@@ -118,6 +118,91 @@ public class NaturalStringComparerIgnoreCaseTests
 	}
 
 	[TestMethod]
+	public void Compare_IgnoringCase_FoldsLettersOutsideTheBmp()
+	{
+		// Deseret small/capital long I, and Adlam small/capital alif: cased letters encoded as surrogate
+		// pairs, which StringComparison.OrdinalIgnoreCase folds by code point.
+		Assert.IsLessThan(0, string.Compare("\U00010428a", "\U00010400b", StringComparison.OrdinalIgnoreCase));
+		Assert.IsLessThan(0, _comparer.Compare("\U00010428a", "\U00010400b"));
+		Assert.IsGreaterThan(0, _comparer.Compare("\U00010400b", "\U00010428a"));
+		Assert.IsLessThan(0, _comparer.Compare("\U0001E922a", "\U0001E900b"));
+		Assert.IsLessThan(0, _comparer.Compare("file\U0001E9222", "File\U0001E90010"));
+	}
+
+	[TestMethod]
+	public void Sort_IgnoringCase_KeepsSupplementaryNamesEqualIgnoringCaseTogether()
+	{
+		string[] names = ["\U0001E900zzz", "\U0001E922file", "\U0001E900file", "\U0001E923a", "\U0001E901b"];
+
+		Array.Sort(names, _comparer);
+
+		int lower = Array.IndexOf(names, "\U0001E922file");
+		int upper = Array.IndexOf(names, "\U0001E900file");
+		Assert.AreEqual(1, Math.Abs(lower - upper), string.Join(", ", names));
+		Assert.AreNotEqual(0, _comparer.Compare("\U0001E922file", "\U0001E900file"));
+		Assert.AreEqual(Math.Sign(string.CompareOrdinal("\U0001E922file", "\U0001E900file")), Math.Sign(_comparer.Compare("\U0001E922file", "\U0001E900file")));
+	}
+
+	[TestMethod]
+	public void Compare_IgnoringCase_FoldsAsOrdinalIgnoreCaseDoes()
+	{
+		// U+E000..U+FFFF are left out: like Ordinal, the comparer orders them after a surrogate pair, by
+		// code unit, where OrdinalIgnoreCase orders them before it, by code point.
+		string[] values =
+		[
+			"a", "A", "\U00010428", "\U00010400", "\U0001E922", "\U0001E900", "\U000104D8", "\U000104B0",
+			"\U0001F600", "\u00E9", "\u00C9", "_", "z", "\U00010428\U00010428", "\U00010400a",
+		];
+
+		foreach (string a in values)
+		{
+			foreach (string b in values)
+			{
+				int expected = Math.Sign(string.Compare(a, b, StringComparison.OrdinalIgnoreCase));
+				if (expected == 0)
+				{
+					expected = Math.Sign(string.CompareOrdinal(a, b));
+				}
+
+				Assert.AreEqual(expected, Math.Sign(_comparer.Compare(a, b)), $"'{a}' vs '{b}'");
+			}
+		}
+	}
+
+	[TestMethod]
+	public void Compare_IgnoringCase_IsTransitiveOverBmpAndSupplementaryLetters()
+	{
+		// A pair can straddle the end of the shorter text chunk ("a" + pair against "a" + digit), and
+		// U+E000..U+FFFF sort after surrogates by code unit, so mix both in with digits.
+		string[] values =
+		[
+			"", "a", "A", "_", "\uE000", "\uFF41", "\uFF21", "\U00010428", "\U00010400", "\U0001E922", "\U0001E900",
+			"\U0001F600", "a\U00010428", "A\U00010400", "a\U0001E922", "a5", "A5", "a\U0001D7D7", "\U000104282",
+			"\U0001040010", "\U00010428_", "\U00010400a", "\U0001E922file", "\U0001E900file", "\U0001E900zzz",
+			"\uD801", "\uDC28", "a\uD801", "5\U00010428",
+		];
+
+		foreach (string a in values)
+		{
+			foreach (string b in values)
+			{
+				int ab = Math.Sign(_comparer.Compare(a, b));
+				Assert.AreEqual(ab, -Math.Sign(_comparer.Compare(b, a)), $"antisymmetry: '{a}' vs '{b}'");
+				Assert.AreEqual(string.Equals(a, b, StringComparison.Ordinal), ab == 0, $"only equal strings tie: '{a}' vs '{b}'");
+
+				foreach (string c in values)
+				{
+					int bc = Math.Sign(_comparer.Compare(b, c));
+					if (ab <= 0 && bc <= 0)
+					{
+						Assert.IsLessThanOrEqualTo(0, _comparer.Compare(a, c), $"transitivity: '{a}' <= '{b}' <= '{c}'");
+					}
+				}
+			}
+		}
+	}
+
+	[TestMethod]
 	public void Compare_IgnoringCase_AllocatesNothing()
 	{
 		(string X, string Y)[] pairs =
@@ -129,6 +214,7 @@ public class NaturalStringComparerIgnoreCaseTests
 			("5A", "a5"),
 			("Same Prefix, Longer", "same prefix"),
 			("abc", "ABC"),
+			("\U00010428a", "\U00010400b"),
 		];
 
 		foreach ((string x, string y) in pairs)
