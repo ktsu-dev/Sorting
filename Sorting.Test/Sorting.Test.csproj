@@ -6,6 +6,9 @@
     <IsTestProject>true</IsTestProject>
     <TargetFramework>net10.0</TargetFramework>
     <TargetFrameworks></TargetFrameworks>
+    <!-- ktsu.Sdk turns invariant globalization on, and its casing leaves 'ſ' (U+017F) alone. Apps use ICU,
+         where char.ToUpperInvariant('ſ') is 'S', so the case-folding tests have to run against ICU too (#79). -->
+    <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
