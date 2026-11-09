@@ -21,7 +21,9 @@ using System.Globalization;
 /// <param name="ignoreCase">
 /// Whether text is compared ignoring case, as <see cref="StringComparison.OrdinalIgnoreCase"/> folds it.
 /// Strings that differ only in case are still never equal: they are ordered next to each other,
-/// ordinally.
+/// ordinally. When a list also holds a variant that differs only in leading zeros or digit script,
+/// the case variants of each spelling stay together and the spellings are ordered side by side
+/// (<c>"photo01"</c>, <c>"Photo1"</c>, <c>"photo1"</c>).
 /// </param>
 public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>, IComparer
 {
@@ -34,7 +36,8 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 	/// <summary>
 	/// Gets a comparer that compares text ordinally ignoring case, so <c>"build3"</c> sorts before
 	/// <c>"Build20"</c>. Strings that differ only in case are still never equal: they are ordered
-	/// next to each other, ordinally.
+	/// next to each other, ordinally, even when a variant that differs only in leading zeros is also
+	/// present.
 	/// </summary>
 	public static NaturalStringComparer OrdinalIgnoreCase { get; } = new(ignoreCase: true);
 
@@ -56,7 +59,8 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 	/// Less than zero if x is less than y.
 	/// Zero only if x and y are ordinally equal; strings whose numbers differ only in leading zeros or
 	/// digit script, or that differ only in case when case is ignored, are ordered next to each other,
-	/// ordinally.
+	/// ordinally. When case is ignored, strings that differ only in case are ordered next to each other
+	/// before leading zeros or digit script are considered.
 	/// Greater than zero if x is greater than y.
 	/// </returns>
 	public int Compare(string? x, string? y)
@@ -131,8 +135,21 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 		}
 
 		// Every chunk matched, but the strings differ in leading zeros or digit script ("file5" and
-		// "file005"), or only in case when case is ignored ("file5" and "File5"). Break the tie ordinally so distinct strings never compare equal, which sorted
-		// collections would take to mean the same key.
+		// "file005"), or only in case when case is ignored ("file5" and "File5"). When case is ignored,
+		// first break the tie ignoring case, so that case variants of one spelling stay next to each
+		// other even when a leading-zero variant is also present ("photo01", "Photo1", "photo1"):
+		// ordinally, case would outrank the digits and put "photo01" between "Photo1" and "photo1".
+		if (ignoreCase)
+		{
+			int folded = string.Compare(x, y, StringComparison.OrdinalIgnoreCase);
+			if (folded != 0)
+			{
+				return folded;
+			}
+		}
+
+		// Then break it ordinally, so distinct strings never compare equal, which sorted collections
+		// would take to mean the same key.
 		return string.CompareOrdinal(x, y);
 	}
 

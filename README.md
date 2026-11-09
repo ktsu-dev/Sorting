@@ -90,6 +90,15 @@ Array.Sort(files, NaturalStringComparer.OrdinalIgnoreCase);
 
 Strings that differ only in case are still never equal under `OrdinalIgnoreCase`. They are ordered next to each other, ordinally, so a `SortedSet<string>` keeps both `file1` and `File1`.
 
+Case variants stay together even when a list also holds a variant that differs only in leading zeros or digit script. The two groupings can't both hold at once, so case wins: each spelling's case variants are adjacent, and the spellings sit side by side:
+
+```csharp
+string[] files = { "photo1.jpg", "photo01.jpg", "Photo1.jpg" };
+
+Array.Sort(files, NaturalStringComparer.OrdinalIgnoreCase);
+// "photo01.jpg", "Photo1.jpg", "photo1.jpg"
+```
+
 ## Features
 
 ### NaturalStringComparer

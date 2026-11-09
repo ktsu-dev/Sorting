@@ -35,6 +35,47 @@ public class NaturalStringComparerIgnoreCaseTests
 	}
 
 	[TestMethod]
+	public void Sort_IgnoringCase_KeepsCaseVariantsTogetherBesideALeadingZeroVariant()
+	{
+		string[] expected = ["photo01.jpg", "Photo1.jpg", "photo1.jpg"];
+		string[] files = ["photo1.jpg", "photo01.jpg", "Photo1.jpg"];
+
+		Array.Sort(files, _comparer);
+
+		CollectionAssert.AreEqual(expected, files);
+	}
+
+	[TestMethod]
+	public void Sort_IgnoringCase_GroupsEveryCaseVariantOfEachSpelling()
+	{
+		string[] expected = ["File05", "file05", "FILE5", "File5", "file5"];
+		string[] files = ["file5", "File5", "file05", "File05", "FILE5"];
+
+		Array.Sort(files, _comparer);
+
+		CollectionAssert.AreEqual(expected, files);
+	}
+
+	[TestMethod]
+	public void Sort_ByDefault_StillBreaksLeadingZeroTiesOrdinally()
+	{
+		string[] expected = ["FILE5", "File05", "File5", "file05", "file5"];
+		string[] files = ["file5", "File5", "file05", "File05", "FILE5"];
+
+		Array.Sort(files, NaturalStringComparer.Ordinal);
+
+		CollectionAssert.AreEqual(expected, files);
+	}
+
+	[TestMethod]
+	public void Compare_IgnoringCase_CaseVariantsBesideALeadingZeroVariantAreNotEqual()
+	{
+		Assert.AreNotEqual(0, _comparer.Compare("Photo1.jpg", "photo1.jpg"));
+		Assert.AreNotEqual(0, _comparer.Compare("photo01.jpg", "Photo1.jpg"));
+		Assert.IsTrue(_comparer.Compare("Photo1.jpg", "photo1.jpg") < 0);
+	}
+
+	[TestMethod]
 	public void Constructor_IgnoreCase_MatchesTheStaticInstance()
 	{
 		NaturalStringComparer constructed = new(ignoreCase: true);
@@ -52,7 +93,7 @@ public class NaturalStringComparerIgnoreCaseTests
 	[TestMethod]
 	public void Compare_IgnoringCase_TiesStringsThatDifferOnlyInCaseOrdinally()
 	{
-		foreach ((string x, string y) in new[] { ("file1", "File1"), ("abc", "ABC"), ("aBc10", "AbC10"), ("img007", "IMG7") })
+		foreach ((string x, string y) in new[] { ("file1", "File1"), ("abc", "ABC"), ("aBc10", "AbC10") })
 		{
 			int expected = Math.Sign(string.CompareOrdinal(x, y));
 			Assert.AreNotEqual(0, expected);
@@ -61,6 +102,14 @@ public class NaturalStringComparerIgnoreCaseTests
 		}
 
 		Assert.AreEqual(0, _comparer.Compare("File1", "File1"));
+	}
+
+	[TestMethod]
+	public void Compare_IgnoringCase_TiesStringsThatDifferInCaseAndLeadingZerosIgnoringCaseFirst()
+	{
+		// Ordinally "IMG7" < "img007", because case outranks the digits; ignoring case, "img007" < "IMG7".
+		Assert.IsTrue(_comparer.Compare("img007", "IMG7") < 0);
+		Assert.IsTrue(_comparer.Compare("IMG7", "img007") > 0);
 	}
 
 	[TestMethod]
