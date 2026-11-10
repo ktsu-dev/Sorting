@@ -273,7 +273,7 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 	{
 		for (int offset = 0; offset < length; offset++)
 		{
-			int comparison = char.ToUpperInvariant(x[xStart + offset]).CompareTo(char.ToUpperInvariant(y[yStart + offset]));
+			int comparison = FoldCase(x[xStart + offset]).CompareTo(FoldCase(y[yStart + offset]));
 			if (comparison != 0)
 			{
 				return comparison;
@@ -290,7 +290,23 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 	/// </summary>
 	/// <param name="value">A character from a text chunk.</param>
 	/// <returns>The character to compare.</returns>
-	private char Fold(char value) => ignoreCase ? char.ToUpperInvariant(value) : value;
+	private char Fold(char value) => ignoreCase ? FoldCase(value) : value;
+
+	/// <summary>
+	/// Folds <paramref name="value"/> to upper case the way <see cref="StringComparison.OrdinalIgnoreCase"/>
+	/// does. That is <see cref="char.ToUpperInvariant(char)"/> for every character but <c>'ſ'</c> (U+017F,
+	/// LATIN SMALL LETTER LONG S): <see cref="char.ToUpperInvariant(char)"/> maps it to <c>'S'</c>, while
+	/// <see cref="StringComparison.OrdinalIgnoreCase"/> leaves it as it is.
+	/// </summary>
+	/// <param name="value">The character to fold.</param>
+	/// <returns>The folded character.</returns>
+	private static char FoldCase(char value) => value == LatinSmallLetterLongS ? value : char.ToUpperInvariant(value);
+
+	/// <summary>
+	/// U+017F LATIN SMALL LETTER LONG S, the one BMP character whose <see cref="char.ToUpperInvariant(char)"/>
+	/// differs from the fold <see cref="StringComparison.OrdinalIgnoreCase"/> applies.
+	/// </summary>
+	private const char LatinSmallLetterLongS = '\u017F';
 
 	/// <summary>
 	/// Compares two runs of decimal digits by the numeric value they spell, rather than by their

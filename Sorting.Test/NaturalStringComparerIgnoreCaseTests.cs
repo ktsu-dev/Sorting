@@ -167,6 +167,54 @@ public class NaturalStringComparerIgnoreCaseTests
 	}
 
 	[TestMethod]
+	public void Compare_IgnoringCase_LeavesLongSUnfoldedAsOrdinalIgnoreCaseDoes()
+	{
+		// char.ToUpperInvariant('ſ') is 'S', but OrdinalIgnoreCase leaves U+017F as it is.
+		Assert.IsTrue(_comparer.Compare("ſ", "t") > 0, "ſ sorts after t");
+		Assert.IsTrue(_comparer.Compare("t", "ſ") < 0, "t sorts before ſ");
+
+		foreach (string other in new[] { "s", "S", "t", "T" })
+		{
+			int expected = Math.Sign(string.Compare("ſ", other, StringComparison.OrdinalIgnoreCase));
+			Assert.AreEqual(expected, Math.Sign(_comparer.Compare("ſ", other)), $"Compare(\"ſ\", \"{other}\")");
+			Assert.AreEqual(-expected, Math.Sign(_comparer.Compare(other, "ſ")), $"Compare(\"{other}\", \"ſ\")");
+		}
+
+		string[] files = ["Tag1.txt", "ſtraße2.txt", "Rose1.txt"];
+		string[] expectedOrder = [.. files];
+		Array.Sort(files, _comparer);
+		Array.Sort(expectedOrder, StringComparer.OrdinalIgnoreCase);
+		CollectionAssert.AreEqual(expectedOrder, files);
+	}
+
+	[TestMethod]
+	public void Compare_IgnoringCase_FoldsEveryBmpLetterAsOrdinalIgnoreCaseDoes()
+	{
+		string[] probes = ["a", "s", "S", "t", "T", "z", "ß", "é", "Ω", "я"];
+
+		for (int code = 0; code <= char.MaxValue; code++)
+		{
+			char c = (char)code;
+			if (char.IsSurrogate(c) || !char.IsLetter(c))
+			{
+				continue;
+			}
+
+			string value = c.ToString();
+			foreach (string probe in probes)
+			{
+				int expected = Math.Sign(string.Compare(value, probe, StringComparison.OrdinalIgnoreCase));
+				if (expected == 0)
+				{
+					continue;
+				}
+
+				Assert.AreEqual(expected, Math.Sign(_comparer.Compare(value, probe)), $"Compare(U+{code:X4}, \"{probe}\")");
+			}
+		}
+	}
+
+	[TestMethod]
 	public void Compare_IgnoringCase_AllocatesNothing()
 	{
 		(string X, string Y)[] pairs =
