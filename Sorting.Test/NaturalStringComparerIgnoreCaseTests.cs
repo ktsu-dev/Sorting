@@ -35,6 +35,47 @@ public class NaturalStringComparerIgnoreCaseTests
 	}
 
 	[TestMethod]
+	public void Sort_IgnoringCase_KeepsCaseVariantsTogetherBesideALeadingZeroVariant()
+	{
+		string[] expected = ["photo01.jpg", "Photo1.jpg", "photo1.jpg"];
+		string[] files = ["photo1.jpg", "photo01.jpg", "Photo1.jpg"];
+
+		Array.Sort(files, _comparer);
+
+		CollectionAssert.AreEqual(expected, files);
+	}
+
+	[TestMethod]
+	public void Sort_IgnoringCase_GroupsEveryCaseVariantOfEachSpelling()
+	{
+		string[] expected = ["File05", "file05", "FILE5", "File5", "file5"];
+		string[] files = ["file5", "File5", "file05", "File05", "FILE5"];
+
+		Array.Sort(files, _comparer);
+
+		CollectionAssert.AreEqual(expected, files);
+	}
+
+	[TestMethod]
+	public void Sort_ByDefault_StillBreaksLeadingZeroTiesOrdinally()
+	{
+		string[] expected = ["FILE5", "File05", "File5", "file05", "file5"];
+		string[] files = ["file5", "File5", "file05", "File05", "FILE5"];
+
+		Array.Sort(files, NaturalStringComparer.Ordinal);
+
+		CollectionAssert.AreEqual(expected, files);
+	}
+
+	[TestMethod]
+	public void Compare_IgnoringCase_CaseVariantsBesideALeadingZeroVariantAreNotEqual()
+	{
+		Assert.AreNotEqual(0, _comparer.Compare("Photo1.jpg", "photo1.jpg"));
+		Assert.AreNotEqual(0, _comparer.Compare("photo01.jpg", "Photo1.jpg"));
+		Assert.IsTrue(_comparer.Compare("Photo1.jpg", "photo1.jpg") < 0);
+	}
+
+	[TestMethod]
 	public void Constructor_IgnoreCase_MatchesTheStaticInstance()
 	{
 		NaturalStringComparer constructed = new(ignoreCase: true);
@@ -52,7 +93,7 @@ public class NaturalStringComparerIgnoreCaseTests
 	[TestMethod]
 	public void Compare_IgnoringCase_TiesStringsThatDifferOnlyInCaseOrdinally()
 	{
-		foreach ((string x, string y) in new[] { ("file1", "File1"), ("abc", "ABC"), ("aBc10", "AbC10"), ("img007", "IMG7") })
+		foreach ((string x, string y) in new[] { ("file1", "File1"), ("abc", "ABC"), ("aBc10", "AbC10") })
 		{
 			int expected = Math.Sign(string.CompareOrdinal(x, y));
 			Assert.AreNotEqual(0, expected);
@@ -61,6 +102,14 @@ public class NaturalStringComparerIgnoreCaseTests
 		}
 
 		Assert.AreEqual(0, _comparer.Compare("File1", "File1"));
+	}
+
+	[TestMethod]
+	public void Compare_IgnoringCase_TiesStringsThatDifferInCaseAndLeadingZerosIgnoringCaseFirst()
+	{
+		// Ordinally "IMG7" < "img007", because case outranks the digits; ignoring case, "img007" < "IMG7".
+		Assert.IsTrue(_comparer.Compare("img007", "IMG7") < 0);
+		Assert.IsTrue(_comparer.Compare("IMG7", "img007") > 0);
 	}
 
 	[TestMethod]
@@ -198,6 +247,54 @@ public class NaturalStringComparerIgnoreCaseTests
 						Assert.IsLessThanOrEqualTo(0, _comparer.Compare(a, c), $"transitivity: '{a}' <= '{b}' <= '{c}'");
 					}
 				}
+			}
+		}
+	}
+
+	[TestMethod]
+	public void Compare_IgnoringCase_LeavesLongSUnfoldedAsOrdinalIgnoreCaseDoes()
+	{
+		// char.ToUpperInvariant('ſ') is 'S', but OrdinalIgnoreCase leaves U+017F as it is.
+		Assert.IsTrue(_comparer.Compare("ſ", "t") > 0, "ſ sorts after t");
+		Assert.IsTrue(_comparer.Compare("t", "ſ") < 0, "t sorts before ſ");
+
+		foreach (string other in new[] { "s", "S", "t", "T" })
+		{
+			int expected = Math.Sign(string.Compare("ſ", other, StringComparison.OrdinalIgnoreCase));
+			Assert.AreEqual(expected, Math.Sign(_comparer.Compare("ſ", other)), $"Compare(\"ſ\", \"{other}\")");
+			Assert.AreEqual(-expected, Math.Sign(_comparer.Compare(other, "ſ")), $"Compare(\"{other}\", \"ſ\")");
+		}
+
+		string[] files = ["Tag1.txt", "ſtraße2.txt", "Rose1.txt"];
+		string[] expectedOrder = [.. files];
+		Array.Sort(files, _comparer);
+		Array.Sort(expectedOrder, StringComparer.OrdinalIgnoreCase);
+		CollectionAssert.AreEqual(expectedOrder, files);
+	}
+
+	[TestMethod]
+	public void Compare_IgnoringCase_FoldsEveryBmpLetterAsOrdinalIgnoreCaseDoes()
+	{
+		string[] probes = ["a", "s", "S", "t", "T", "z", "ß", "é", "Ω", "я"];
+
+		for (int code = 0; code <= char.MaxValue; code++)
+		{
+			char c = (char)code;
+			if (char.IsSurrogate(c) || !char.IsLetter(c))
+			{
+				continue;
+			}
+
+			string value = c.ToString();
+			foreach (string probe in probes)
+			{
+				int expected = Math.Sign(string.Compare(value, probe, StringComparison.OrdinalIgnoreCase));
+				if (expected == 0)
+				{
+					continue;
+				}
+
+				Assert.AreEqual(expected, Math.Sign(_comparer.Compare(value, probe)), $"Compare(U+{code:X4}, \"{probe}\")");
 			}
 		}
 	}

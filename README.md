@@ -92,6 +92,15 @@ Strings that differ only in case are still never equal under `OrdinalIgnoreCase`
 
 Letters outside the Basic Multilingual Plane fold too, by code point, so names in Adlam, Deseret or Osage interleave the same way Latin names do. Folded text is still ordered by UTF-16 code unit, as `Ordinal` orders it, so U+E000 to U+FFFF sort after those letters, where `string.Compare(..., StringComparison.OrdinalIgnoreCase)` puts them before.
 
+Case variants stay together even when a list also holds a variant that differs only in leading zeros or digit script. The two groupings can't both hold at once, so case wins: each spelling's case variants are adjacent, and the spellings sit side by side:
+
+```csharp
+string[] files = { "photo1.jpg", "photo01.jpg", "Photo1.jpg" };
+
+Array.Sort(files, NaturalStringComparer.OrdinalIgnoreCase);
+// "photo01.jpg", "Photo1.jpg", "photo1.jpg"
+```
+
 ## Features
 
 ### NaturalStringComparer
