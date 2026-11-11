@@ -139,9 +139,17 @@ public partial class NaturalStringComparer(bool ignoreCase) : IComparer<string?>
 		// first break the tie ignoring case, so that case variants of one spelling stay next to each
 		// other even when a leading-zero variant is also present ("photo01", "Photo1", "photo1"):
 		// ordinally, case would outrank the digits and put "photo01" between "Photo1" and "photo1".
+		// Compare the folded code units rather than with StringComparison.OrdinalIgnoreCase, which puts
+		// U+E000 to U+FFFF before surrogate pairs: fullwidth digits would then sort before mathematical
+		// ones here, but after them ordinally, though nothing differs in case.
 		if (ignoreCase)
 		{
-			int folded = string.Compare(x, y, StringComparison.OrdinalIgnoreCase);
+			int folded = CompareFolded(x, 0, y, 0, Math.Min(x.Length, y.Length));
+			if (folded == 0)
+			{
+				folded = x.Length.CompareTo(y.Length);
+			}
+
 			if (folded != 0)
 			{
 				return folded;

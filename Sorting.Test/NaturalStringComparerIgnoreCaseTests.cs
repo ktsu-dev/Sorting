@@ -333,4 +333,20 @@ public class NaturalStringComparerIgnoreCaseTests
 
 		Assert.AreEqual(0L, allocated, $"{allocated} bytes allocated over {pairs.Length * 2000} comparisons");
 	}
+
+	[TestMethod]
+	public void Compare_DigitScriptsWithNoCaseDifference_OrdersAsOrdinalDoes()
+	{
+		// Fullwidth U+FF11 against Mathematical U+1D7CF: no case differs, so ignoring case must not
+		// change which comes first. OrdinalIgnoreCase puts U+E000-U+FFFF before surrogate pairs.
+		string fullwidth = "file\uFF11";
+		string mathematical = "file\U0001D7CF";
+
+		Assert.AreEqual(
+			Math.Sign(NaturalStringComparer.Ordinal.Compare(fullwidth, mathematical)),
+			Math.Sign(_comparer.Compare(fullwidth, mathematical)));
+		Assert.AreEqual(
+			Math.Sign(NaturalStringComparer.Ordinal.Compare(mathematical, fullwidth)),
+			Math.Sign(_comparer.Compare(mathematical, fullwidth)));
+	}
 }
