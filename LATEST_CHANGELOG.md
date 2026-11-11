@@ -1,6 +1,6 @@
-## v1.1.1 (patch)
+## v1.1.2-pre.1 (prerelease)
 
-Changes since v1.1.0:
+Changes since v1.1.1:
 
-- Fold letters outside the BMP in OrdinalIgnoreCase [patch] (#78) (matt-edmondson)
+- Bump the ktsu group with 9 updates (dependabot[bot])
 
