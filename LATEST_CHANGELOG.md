@@ -2,6 +2,8 @@
 
 Changes since v1.0.0:
 
+- Leave a long s unfolded in OrdinalIgnoreCase, as StringComparison does [patch] (#80) (matt-edmondson)
+- Keep case variants together beside a leading-zero variant under OrdinalIgnoreCase [patch] (#82) (matt-edmondson)
 - Add an ignore-case option to NaturalStringComparer [minor] (#76) (matt-edmondson)
 - Implement the non-generic IComparer on NaturalStringComparer [minor] (#75) (matt-edmondson)
 - Regenerate CompatibilitySuppressions.xml after the Polyfill 11.4.5 bump [patch] (#73) (matt-edmondson)
