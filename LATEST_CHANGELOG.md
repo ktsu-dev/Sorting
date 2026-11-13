@@ -1,6 +1,6 @@
-## v1.1.2-pre.2 (prerelease)
+## v1.1.2 (patch)
 
-Changes since v1.1.2-pre.1:
+Changes since v1.1.1:
 
-- Bump MSTest.Sdk from 4.5.2 to 4.5.3 (dependabot[bot])
+- Break an ignore-case tie on folded code units, as Ordinal orders them [patch] (#85) (matt-edmondson)
 
