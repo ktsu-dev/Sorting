@@ -1,6 +1,6 @@
-## v1.1.2 (patch)
+## v1.1.3-pre.1 (prerelease)
 
-Changes since v1.1.1:
+Changes since v1.1.2:
 
-- Break an ignore-case tie on folded code units, as Ordinal orders them [patch] (#85) (matt-edmondson)
+- Bump the ktsu group with 9 updates (dependabot[bot])
 
